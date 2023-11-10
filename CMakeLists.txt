@@ -7,7 +7,7 @@ set(src_core python_helper.cpp fixedbody.cpp softbody.cpp collision.cpp collisio
 list(TRANSFORM src_core PREPEND "src/engine/")
 set(src_lib ${src_core} src/engine/api.cpp src/engine/mesh_utils.cpp)
 
-find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development)
+find_package(Python 3.10 EXACT REQUIRED COMPONENTS Interpreter Development)
 
 add_subdirectory(extern/pybind11)
 add_subdirectory(extern/tetgen)
