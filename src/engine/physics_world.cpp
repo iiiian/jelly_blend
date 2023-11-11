@@ -246,12 +246,12 @@ std::optional<Collision> PhysicsWorld::detect_soft_vertex_collision(SoftBody *ps
         Eigen::Vector3d normal, projection;
         Eigen::Vector3d bary_new = cal_face_bary(vert_new, fc_new, normal, projection);
 
-        // check passive collision
-        if (std::abs(bary_new[2]) < collision_distance)
-        {
-            Vertex collision_vert = {psoft, vertex_index};
-            return Collision(collision_vert, face, normal, projection);
-        }
+        // // check passive collision
+        // if (std::abs(bary_new[2]) < collision_distance)
+        // {
+        //     Vertex collision_vert = {psoft, vertex_index};
+        //     return Collision(collision_vert, face, normal, projection);
+        // }
 
         // continue of vertex is not at the back side of the face
         if (bary_new[2] > 0)
@@ -266,7 +266,8 @@ std::optional<Collision> PhysicsWorld::detect_soft_vertex_collision(SoftBody *ps
 
         Eigen::Vector3d bary_old = cal_face_bary(vert_old, fc_old);
 
-        if (std::abs(bary_old[2]) < collision_distance)
+        if (std::abs(bary_old[2]) < collision_distance && bary_old[0] >= 0 && bary_old[1] >= 0 &&
+            (bary_old[0] + bary_old[1]) <= 1)
         {
             Vertex collision_vert = {psoft, vertex_index};
             return Collision(collision_vert, face, normal, projection);
@@ -283,7 +284,7 @@ std::optional<Collision> PhysicsWorld::detect_soft_vertex_collision(SoftBody *ps
         Eigen::Vector3d cbary = bary_old + coeff * dbary;
 
         // check if collision point is inside the face
-        if (cbary[0] > 0 && cbary[1] > 0 && cbary[0] + cbary[1] < 1)
+        if (cbary[0] >= 0 && cbary[1] >= 0 && (cbary[0] + cbary[1]) <= 1)
         {
             Vertex collision_vert = {psoft, vertex_index};
             return Collision(collision_vert, face, normal, projection);
@@ -571,9 +572,10 @@ void PhysicsWorld::update()
     detect_collisions();
     // if (!collisions.empty())
     // {
+    //     spdlog::info("frame {}", current_frame);
     //     for (auto &c : collisions)
     //     {
-    //         if (c.face_normal[2] > 0)
+    //         if (c.face_normal[2] > 0.1)
     //         {
     //             continue;
     //         }

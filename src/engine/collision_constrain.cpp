@@ -177,48 +177,90 @@ DynamicCollisionConstrain::DynamicCollisionConstrain(const Collision &collision,
 void DynamicCollisionConstrain::solve(Eigen::VectorXd &x)
 {
 
+    Eigen::Matrix<double, 3, 4> p;
+
     // position of the vertex
-    auto p = x(Eigen::seqN(vertex_x_start, 3));
+    p.col(0) = x(Eigen::seqN(vertex_x_start, 3));
 
     // position of the corners of the face
-    auto fp0 = x(Eigen::seqN(face_x_start[0], 3));
-    auto fp1 = x(Eigen::seqN(face_x_start[1], 3));
-    auto fp2 = x(Eigen::seqN(face_x_start[2], 3));
+    p.col(1) = x(Eigen::seqN(face_x_start[0], 3));
+    p.col(2) = x(Eigen::seqN(face_x_start[1], 3));
+    p.col(3) = x(Eigen::seqN(face_x_start[2], 3));
 
-    std::array<Eigen::Vector3d, 3> delta_p;
-    delta_p[0] = p - fp0;   // a
-    delta_p[1] = fp1 - fp0; // b
-    delta_p[2] = fp2 - fp0; // c
+    Eigen::Matrix3d r;
+    r.col(0) = p.col(0) - p.col(1);
+    r.col(1) = p.col(2) - p.col(1);
+    r.col(2) = p.col(3) - p.col(1);
 
-    Eigen::Vector3d face_normal = delta_p[1].cross(delta_p[2]);
-    double con_val = delta_p[0].dot(face_normal);
+    double con_val = r.col(0).dot(r.col(1).cross(r.col(2)));
     if (con_val > 0)
     {
         return;
     }
 
-    std::array<Eigen::Vector3d, 3> cross_cache;
-    cross_cache[0] = delta_p[1].cross(delta_p[2]); // bxc
-    cross_cache[1] = delta_p[2].cross(delta_p[0]); // cxa
-    cross_cache[2] = delta_p[0].cross(delta_p[1]); // axb
+    Eigen::Matrix<double, 3, 4> grad;
+    grad.col(0) = r.col(1).cross(r.col(2));
+    grad.col(1) = r.col(2).cross(r.col(1)) + r.col(0).cross(r.col(2)) + r.col(1).cross(r.col(0));
+    grad.col(2) = r.col(2).cross(r.col(0));
+    grad.col(3) = r.col(0).cross(r.col(1));
 
-    std::array<Eigen::Vector3d, 4> grad;
-    grad[0] = cross_cache[0];                                      // grad p
-    grad[1] = -(cross_cache[0] + cross_cache[1] + cross_cache[2]); // grad p0
-    grad[2] = cross_cache[1];                                      // grad p1
-    grad[3] = cross_cache[2];                                      // grad p2
-
-    double weighted_coeff = vertex_weight * grad[0].dot(grad[0]);
+    double weighted_coeff = vertex_weight * grad.col(0).dot(grad.col(0));
     for (size_t i = 0; i < 3; ++i)
     {
-        weighted_coeff += face_weights[i] * grad[i].dot(grad[i]);
+        weighted_coeff += face_weights[i] * grad.col(i).dot(grad.col(i));
     }
 
-    x(Eigen::seqN(vertex_x_start, 3)) += -con_val * vertex_weight / weighted_coeff * grad[0];    // p
-    x(Eigen::seqN(face_x_start[0], 3)) += -con_val * face_weights[0] / weighted_coeff * grad[1]; // p0
-    x(Eigen::seqN(face_x_start[1], 3)) += -con_val * face_weights[1] / weighted_coeff * grad[2]; // p1
-    x(Eigen::seqN(face_x_start[2], 3)) += -con_val * face_weights[2] / weighted_coeff * grad[3]; // p2
+    x(Eigen::seqN(vertex_x_start, 3)) += -con_val * vertex_weight / weighted_coeff * grad.col(0);
+    x(Eigen::seqN(face_x_start[0], 3)) += -con_val * face_weights[0] / weighted_coeff * grad.col(1);
+    x(Eigen::seqN(face_x_start[1], 3)) += -con_val * face_weights[1] / weighted_coeff * grad.col(2);
+    x(Eigen::seqN(face_x_start[2], 3)) += -con_val * face_weights[2] / weighted_coeff * grad.col(3);
 }
+
+// void DynamicCollisionConstrain::solve(Eigen::VectorXd &x)
+// {
+
+//     // position of the vertex
+//     auto p = x(Eigen::seqN(vertex_x_start, 3));
+
+//     // position of the corners of the face
+//     auto fp0 = x(Eigen::seqN(face_x_start[0], 3));
+//     auto fp1 = x(Eigen::seqN(face_x_start[1], 3));
+//     auto fp2 = x(Eigen::seqN(face_x_start[2], 3));
+
+//     std::array<Eigen::Vector3d, 3> delta_p;
+//     delta_p[0] = p - fp0;   // a
+//     delta_p[1] = fp1 - fp0; // b
+//     delta_p[2] = fp2 - fp0; // c
+
+//     Eigen::Vector3d face_normal = delta_p[1].cross(delta_p[2]);
+//     double con_val = delta_p[0].dot(face_normal);
+//     if (con_val > 0)
+//     {
+//         return;
+//     }
+
+//     std::array<Eigen::Vector3d, 3> cross_cache;
+//     cross_cache[0] = delta_p[1].cross(delta_p[2]); // bxc
+//     cross_cache[1] = delta_p[2].cross(delta_p[0]); // cxa
+//     cross_cache[2] = delta_p[0].cross(delta_p[1]); // axb
+
+//     std::array<Eigen::Vector3d, 4> grad;
+//     grad[0] = cross_cache[0];                                      // grad p
+//     grad[1] = -(cross_cache[0] + cross_cache[1] + cross_cache[2]); // grad p0
+//     grad[2] = cross_cache[1];                                      // grad p1
+//     grad[3] = cross_cache[2];                                      // grad p2
+
+//     double weighted_coeff = vertex_weight * grad[0].dot(grad[0]);
+//     for (size_t i = 0; i < 3; ++i)
+//     {
+//         weighted_coeff += face_weights[i] * grad[i].dot(grad[i]);
+//     }
+
+//     x(Eigen::seqN(vertex_x_start, 3)) += -con_val * vertex_weight / weighted_coeff * grad[0];    // p
+//     x(Eigen::seqN(face_x_start[0], 3)) += -con_val * face_weights[0] / weighted_coeff * grad[1]; // p0
+//     x(Eigen::seqN(face_x_start[1], 3)) += -con_val * face_weights[1] / weighted_coeff * grad[2]; // p1
+//     x(Eigen::seqN(face_x_start[2], 3)) += -con_val * face_weights[2] / weighted_coeff * grad[3]; // p2
+// }
 
 std::string DynamicCollisionConstrain::summary()
 {
