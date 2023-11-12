@@ -1,6 +1,3 @@
-import bpy
-from . import property, operator, panel
-
 bl_info = {
     "name": "Jelly Blend Soft Body",
     "author": "Tzu Hiang Su",
@@ -9,6 +6,8 @@ bl_info = {
     "category": "Animation",
 }
 
+import bpy
+from . import property, operator, panel
 
 def register():
     property.register()
