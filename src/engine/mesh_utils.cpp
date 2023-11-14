@@ -99,30 +99,82 @@ ExportGeometry process_tetgenio(const tetgenio *data)
     return geometry;
 }
 
-struct IntEdge
+struct IdxEdge
 {
-    size_t point1;
-    size_t point2;
+    size_t p0;
+    size_t p1;
 
-    IntEdge(size_t point1, size_t point2) : point1(point1), point2(point2){};
+    IdxEdge(size_t p0, size_t p1) : p0(p0), p1(p1){};
 };
 
-inline bool operator==(IntEdge const &e1, IntEdge const &e2)
+inline bool operator==(IdxEdge const &e0, IdxEdge const &e1)
 {
-    return (e1.point1 == e2.point1 && e1.point2 == e2.point2) || (e1.point1 == e2.point2 && e1.point2 == e2.point1);
+    return (e0.p0 == e1.p0 && e0.p1 == e1.p1) || (e0.p0 == e1.p1 && e0.p1 == e1.p0);
 }
 
 // 1. vertices of a edge must be different, no risk of hashing to 0
 // 2. order of vertices does not matters here, so it's fine that xor is
 //    symmetric
-struct IntEdgeHash
+struct IdxEdgeHash
 {
   public:
-    std::size_t operator()(const IntEdge &e) const
+    std::size_t operator()(const IdxEdge &e) const
     {
-        return std::hash<size_t>()(e.point1) ^ std::hash<size_t>()(e.point2);
+        return std::hash<size_t>()(e.p0) ^ std::hash<size_t>()(e.p1);
     }
 };
+
+void find_all_edges(ExportGeometry &geometry)
+{
+    std::unordered_set<IdxEdge, IdxEdgeHash> edge_set;
+    size_t tetra_num = geometry.tetrahedra.size() / 4;
+    for (size_t tetra_index = 0; tetra_index < tetra_num; ++tetra_index)
+    {
+        for (size_t i = 0; i < 4; ++i)
+        {
+            for (size_t j = i + 1; j < 4; ++j)
+            {
+                size_t p1_index = geometry.tetrahedra[4 * tetra_index + i];
+                size_t p2_index = geometry.tetrahedra[4 * tetra_index + j];
+                edge_set.emplace(p1_index, p2_index);
+            }
+        }
+    }
+    size_t edge_num = edge_set.size();
+    geometry.all_edges.resize(edge_num * 2);
+    size_t i = 0; // index of edge
+    for (const IdxEdge &edge : edge_set)
+    {
+        geometry.all_edges[2 * i] = edge.p0;
+        geometry.all_edges[2 * i + 1] = edge.p1;
+        i++;
+    }
+}
+
+void find_all_surface_edges(ExportGeometry &geometry)
+{
+    std::unordered_set<IdxEdge, IdxEdgeHash> edge_set;
+    size_t face_num = geometry.surface_faces.size() / 3;
+    for (size_t i = 0; i < face_num; ++i)
+    {
+        size_t p1 = geometry.surface_faces[3 * i];
+        size_t p2 = geometry.surface_faces[3 * i + 1];
+        size_t p3 = geometry.surface_faces[3 * i + 2];
+
+        edge_set.emplace(p1, p2);
+        edge_set.emplace(p2, p3);
+        edge_set.emplace(p1, p3);
+    }
+    size_t surface_edge_num = edge_set.size();
+    geometry.surface_edges.resize(surface_edge_num * 2);
+    size_t i = 0; // index of edge
+    for (const IdxEdge &edge : edge_set)
+    {
+        geometry.surface_edges[2 * i] = edge.p0;
+        geometry.surface_edges[2 * i + 1] = edge.p1;
+        i++;
+    }
+}
 
 ExportGeometry softbody_mesh_from_bl_mesh(pybind11::object mesh, double max_volume)
 {
@@ -224,52 +276,8 @@ ExportGeometry softbody_mesh_from_bl_mesh(pybind11::object mesh, double max_volu
     ExportGeometry geometry;
     geometry = process_tetgenio(&out);
 
-    // find all edges
-    std::unordered_set<IntEdge, IntEdgeHash> edge_set;
-    size_t tetra_num = geometry.tetrahedra.size() / 4;
-    for (size_t tetra_index = 0; tetra_index < tetra_num; ++tetra_index)
-    {
-        for (size_t i = 0; i < 4; ++i)
-        {
-            for (size_t j = i + 1; j < 4; ++j)
-            {
-                size_t p1_index = geometry.tetrahedra[4 * tetra_index + i];
-                size_t p2_index = geometry.tetrahedra[4 * tetra_index + j];
-                edge_set.emplace(p1_index, p2_index);
-            }
-        }
-    }
-    size_t edge_num = edge_set.size();
-    geometry.all_edges.resize(edge_num * 2);
-    i = 0; // index of edge
-    for (const IntEdge &edge : edge_set)
-    {
-        geometry.all_edges[2 * i] = edge.point1;
-        geometry.all_edges[2 * i + 1] = edge.point2;
-        i++;
-    }
-
-    // find all surface edges
-    edge_set.clear();
-    for (size_t i = 0; i < geometry.surface_faces.size() / 3; ++i)
-    {
-        size_t p1 = geometry.surface_faces[3 * i];
-        size_t p2 = geometry.surface_faces[3 * i + 1];
-        size_t p3 = geometry.surface_faces[3 * i + 2];
-
-        edge_set.emplace(p1, p2);
-        edge_set.emplace(p2, p3);
-        edge_set.emplace(p1, p3);
-    }
-    size_t surface_edge_num = edge_set.size();
-    geometry.surface_edges.resize(surface_edge_num * 2);
-    i = 0; // index of edge
-    for (const IntEdge &edge : edge_set)
-    {
-        geometry.surface_edges[2 * i] = edge.point1;
-        geometry.surface_edges[2 * i + 1] = edge.point2;
-        i++;
-    }
+    find_all_edges(geometry);
+    find_all_surface_edges(geometry);
 
     // spdlog::info("Mesh out:");
     // spdlog::info("  vertices num = {}", out.numberofpoints);
