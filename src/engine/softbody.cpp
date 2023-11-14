@@ -17,6 +17,7 @@ void SoftBody::load_settings(const SoftBodySetting &settings)
     youngs_modulus = settings.youngs_modulus;
     poissons_ratio = settings.poissons_ratio;
     damping = settings.damping;
+    friction = settings.friction;
     detect_self_collision = settings.detect_self_collision;
 }
 

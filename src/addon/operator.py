@@ -122,6 +122,7 @@ class JBSimulate(bpy.types.Operator):
             soft_setting.youngs_modulus = soft_props.stiffness * 1e7
             soft_setting.poissons_ratio = 0.5 - soft_props.compressibility * 0.01
             soft_setting.damping = soft_props.damping
+            soft_setting.friction = soft_props.friction
             soft_setting.detect_self_collision = soft_props.self_collision
 
             phy_world.add_softbody(soft, soft_setting)

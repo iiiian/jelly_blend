@@ -32,6 +32,13 @@ class JBSoftBodyProperty(bpy.types.PropertyGroup):
         default=0,
         description="the damping of the soft body, affects the decay of vibration",
     )
+    friction: bpy.props.FloatProperty(
+        name="friction",
+        min=0,
+        max=1,
+        default=0,
+        description="the friction of the soft body, affects collisions",
+    )
     self_collision: bpy.props.BoolProperty(name="self collision", default=False)
 
     # mesh related

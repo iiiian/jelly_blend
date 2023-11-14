@@ -478,12 +478,12 @@ void PhysicsWorld::update_body_predict()
 
 void PhysicsWorld::update_body_vertices()
 {
-    for (auto sp_fixed : sp_fixedbodies)
+    for (auto &sp_fixed : sp_fixedbodies)
     {
         sp_fixed->vertices = sp_fixed->predict_vertices;
     }
 
-    for (auto sp_soft : sp_softbodies)
+    for (auto &sp_soft : sp_softbodies)
     {
         sp_soft->velocity = sp_soft->predict_vertices - sp_soft->vertices;
         sp_soft->velocity /= time_delta;
@@ -491,7 +491,7 @@ void PhysicsWorld::update_body_vertices()
     }
 
     // damping the vibration of the softbody
-    for (auto sp_soft : sp_softbodies)
+    for (auto &sp_soft : sp_softbodies)
     {
         // calculate global translational velocity
         Eigen::Vector3d gb_tra_velocity = sp_soft->velocity.rowwise().sum() / sp_soft->vertex_num;
@@ -521,6 +521,36 @@ void PhysicsWorld::update_body_vertices()
         double effective_damping = std::pow(1 - sp_soft->damping, 1.f / frame_rate * frame_substep_num);
         sp_soft->velocity *= effective_damping;
         sp_soft->velocity += (1 - effective_damping) * gb_velocity;
+    }
+
+    // apply friction
+    for (auto &colli : collisions)
+    {
+        auto p_vert_body = colli.vertex.pbody;
+        if (typeid(*p_vert_body) != typeid(SoftBody))
+        {
+            continue;
+        }
+        SoftBody *p_vert_soft = dynamic_cast<SoftBody *>(p_vert_body);
+
+        // calculate face normal
+        auto p_face_body = colli.face.pbody;
+        Eigen::Vector<size_t, 3> face_vert_indexes = p_face_body->faces.col(colli.face.face_index);
+
+        auto c0 = p_face_body->vertices.col(face_vert_indexes(0));
+        auto c1 = p_face_body->vertices.col(face_vert_indexes(1));
+        auto c2 = p_face_body->vertices.col(face_vert_indexes(2));
+
+        Eigen::Vector3d normal = (c1 - c0).cross(c2 - c0);
+        normal.normalize();
+
+        double effective_friction = std::pow(1 - p_vert_soft->friction, 1.f / frame_rate * frame_substep_num);
+        size_t vert_index = colli.vertex.vertex_index;
+        auto v = p_vert_soft->velocity.col(vert_index);
+
+        Eigen::Vector3d v_norm = v.dot(normal) * normal;
+        v *= effective_friction;
+        v += (1 - effective_friction) * v_norm;
     }
 }
 

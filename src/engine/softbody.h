@@ -21,6 +21,7 @@ struct SoftBodySetting
     double youngs_modulus = 1e7;
     double poissons_ratio = 0.49;
     double damping = 0;
+    double friction = 0;
     bool detect_self_collision = false;
 };
 
@@ -33,6 +34,7 @@ class SoftBody : public Body
     double youngs_modulus = 1e7; // Pa
     double poissons_ratio = 0.49;
     double damping = 0;
+    double friction = 0;
     bool detect_self_collision = false;
     // load from blender data
     std::string bl_object_name;

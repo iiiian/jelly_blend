@@ -145,6 +145,7 @@ class JB_PT_SoftBodyTypePanel(bpy.types.Panel):
         column.prop(softbody_props, "stiffness")
         column.prop(softbody_props, "compressibility")
         column.prop(softbody_props, "damping")
+        column.prop(softbody_props, "friction")
         box.prop(softbody_props, "self_collision")
 
 

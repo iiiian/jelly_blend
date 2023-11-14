@@ -30,6 +30,7 @@ PYBIND11_MODULE(jellyblend_engine, m)
         .def_readwrite("youngs_modulus", &SoftBodySetting::youngs_modulus)
         .def_readwrite("poissons_ratio", &SoftBodySetting::poissons_ratio)
         .def_readwrite("damping", &SoftBodySetting::damping)
+        .def_readwrite("friction", &SoftBodySetting::friction)
         .def_readwrite("detect_self_collision", &SoftBodySetting::detect_self_collision);
 
     py::class_<PhysicsWorldSetting>(m, "PhysicsWorldSetting")
