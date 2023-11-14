@@ -187,7 +187,7 @@ class JB_PT_SimPanel(bpy.types.Panel):
             box = self.layout.box()
             box.label(text="Advanced Settings")
             column = box.column()
-            column.prop(sim_settings, "collision_detection_distance")
+            column.prop(sim_settings, "passive_collision_distance")
             column.prop(sim_settings, "colli_map_size")
 
         """

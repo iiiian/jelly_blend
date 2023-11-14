@@ -103,7 +103,7 @@ class JBSimulate(bpy.types.Operator):
         phy_setting.solver_substep_num = sim_settings.solver_frame_substep
         phy_setting.frame_substep_num = sim_settings.collision_frame_substep
         phy_setting.frame_rate = sim_settings.frame_rate
-        phy_setting.collision_distance = sim_settings.collision_detection_distance
+        phy_setting.passive_collision_distance = sim_settings.passive_collision_distance
         phy_setting.spatial_map_size_multiplier = sim_settings.colli_map_size
 
         phy_world.load_setting(phy_setting)

@@ -246,17 +246,18 @@ std::optional<Collision> PhysicsWorld::detect_soft_vertex_collision(SoftBody *ps
         Eigen::Vector3d normal, projection;
         Eigen::Vector3d bary_new = cal_face_bary(vert_new, fc_new, normal, projection);
 
-        // // check passive collision
-        // if (std::abs(bary_new[2]) < collision_distance)
-        // {
-        //     Vertex collision_vert = {psoft, vertex_index};
-        //     return Collision(collision_vert, face, normal, projection);
-        // }
-
         // continue of vertex is not at the back side of the face
         if (bary_new[2] > 0)
         {
             continue;
+        }
+
+        // passive collision
+        if (bary_new[2] > -passive_collision_distance && bary_new[0] >= 0 && bary_new[1] >= 0 &&
+            (bary_new[0] + bary_new[1] <= 1))
+        {
+            Vertex collision_vert = {psoft, vertex_index};
+            return Collision(collision_vert, face, normal, projection);
         }
 
         Eigen::Matrix3d fc_old; // face corners coordinates
@@ -266,15 +267,10 @@ std::optional<Collision> PhysicsWorld::detect_soft_vertex_collision(SoftBody *ps
 
         Eigen::Vector3d bary_old = cal_face_bary(vert_old, fc_old);
 
-        if (std::abs(bary_old[2]) < collision_distance && bary_old[0] >= 0 && bary_old[1] >= 0 &&
-            (bary_old[0] + bary_old[1]) <= 1)
-        {
-            Vertex collision_vert = {psoft, vertex_index};
-            return Collision(collision_vert, face, normal, projection);
-        }
-
         // continue if there's no trjectory penetration
-        if (bary_new[2] * bary_old[2] > 0)
+        // the addition of passive collision distance is to workaround
+        // penetration caused by dynamic collision constrain in last frame
+        if (bary_new[2] * (bary_old[2] + passive_collision_distance) > 0)
         {
             continue;
         }
@@ -605,10 +601,6 @@ void PhysicsWorld::update()
     //     spdlog::info("frame {}", current_frame);
     //     for (auto &c : collisions)
     //     {
-    //         if (c.face_normal[2] > 0.1)
-    //         {
-    //             continue;
-    //         }
     //         std::cout << c.summary() << "\n";
     //     }
     // }
@@ -676,6 +668,8 @@ void PhysicsWorld::prepare_simulation(int frame_start, bool test_mode)
             sp_fixed->update_frame_vert(frame_start);
         }
     }
+
+    dump_to_file("/home/ian/local_code/jelly_blend/test/world_data");
 }
 
 void PhysicsWorld::next_frame()
@@ -724,7 +718,7 @@ void PhysicsWorld::load_setting(const PhysicsWorldSetting &setting)
     this->solver_substep_num = setting.solver_substep_num;
     this->frame_substep_num = setting.frame_substep_num;
     this->frame_rate = setting.frame_rate;
-    this->collision_distance = setting.collision_distance;
+    this->passive_collision_distance = setting.passive_collision_distance;
     this->spatial_map_mem_threshold = setting.spatial_map_mem_threshold;
     this->spatial_map_size_multiplier = setting.spatial_map_size_multiplier;
 }
@@ -735,7 +729,7 @@ void PhysicsWorld::dump_to_file(std::string file_path)
     cereal::BinaryOutputArchive oarchive(file_stream);
     file_stream.open(file_path, std::ios::binary);
 
-    oarchive(solver_substep_num, frame_substep_num, frame_rate, collision_distance, spatial_map_mem_threshold,
+    oarchive(solver_substep_num, frame_substep_num, frame_rate, passive_collision_distance, spatial_map_mem_threshold,
              spatial_map_size_multiplier);
     oarchive(spatial_map_size, position_num);
     oarchive(sp_fixedbodies, sp_softbodies);
@@ -749,7 +743,7 @@ void PhysicsWorld::load_from_file(std::string file_path)
     cereal::BinaryInputArchive iarchive(file_stream);
     file_stream.open(file_path, std::ios::binary);
 
-    iarchive(solver_substep_num, frame_substep_num, frame_rate, collision_distance, spatial_map_mem_threshold,
+    iarchive(solver_substep_num, frame_substep_num, frame_rate, passive_collision_distance, spatial_map_mem_threshold,
              spatial_map_size_multiplier);
     iarchive(spatial_map_size, position_num);
     iarchive(sp_fixedbodies, sp_softbodies);
@@ -768,7 +762,7 @@ std::string PhysicsWorld::summary()
     ss << "solver_substep_num = " << solver_substep_num << "\n";
     ss << "frame_substep_num = " << frame_substep_num << "\n";
     ss << "frame_rate = " << frame_rate << "\n";
-    ss << "collision_distance = " << collision_distance << "\n";
+    ss << "passive_collision_distance = " << passive_collision_distance << "\n";
     ss << "spatial_map_mem_threshold = " << spatial_map_mem_threshold << " MB\n";
     ss << "spatial_map_size = " << spatial_map_size << "\n";
     ss << "fixedbodyies num = " << sp_fixedbodies.size() << "\n";

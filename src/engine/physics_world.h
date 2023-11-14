@@ -29,7 +29,7 @@ struct PhysicsWorldSetting
     int solver_substep_num = 1;
     int frame_substep_num = 50;
     int frame_rate = 24;
-    double collision_distance = 0.1;
+    double passive_collision_distance = 0.1;
     size_t spatial_map_mem_threshold = 100;
     int spatial_map_size_multiplier = 50;
 };
@@ -44,7 +44,7 @@ class PhysicsWorld
     int frame_substep_num = 50;
     int frame_rate = 24;
     // collision below this distance will be detected
-    double collision_distance = 1e-3;
+    double passive_collision_distance = 1e-2;
     // in MB, if the size of the faces in spatial map excedes this limits, clean
     // the map
     size_t spatial_map_mem_threshold = 300;
@@ -98,14 +98,14 @@ class PhysicsWorld
 
     template <typename Archive> void save(Archive &ar) const
     {
-        ar(solver_substep_num, frame_substep_num, frame_rate, collision_distance);
+        ar(solver_substep_num, frame_substep_num, frame_rate, passive_collision_distance);
         ar(spatial_map_size, position_num);
         ar(sp_fixedbodies, sp_softbodies);
     }
 
     template <typename Archive> void load(Archive &ar)
     {
-        ar(solver_substep_num, frame_substep_num, frame_rate, collision_distance);
+        ar(solver_substep_num, frame_substep_num, frame_rate, passive_collision_distance);
         ar(spatial_map_size, position_num);
         ar(sp_fixedbodies, sp_softbodies);
         reindex_softbody_positions();
