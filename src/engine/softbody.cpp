@@ -242,12 +242,9 @@ void SoftBody::insert_mesh_keyframe(int frame)
     size_t i = 0;
     for (auto bl_shape_key_point : bl_shape_key.attr("data"))
     {
-        Eigen::Vector3d vertex_coor = vertices.col(i);
-        // Eigen::Vector3d vertex_coor =
-        // bl_transformer.to_local(vertices.col(i));
         for (size_t j = 0; j < 3; ++j)
         {
-            bl_shape_key_point.attr("co").attr("__setitem__")(j, vertex_coor(j, i));
+            bl_shape_key_point.attr("co").attr("__setitem__")(j, vertices(j, i));
         }
         ++i;
     }
