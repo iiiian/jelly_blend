@@ -198,6 +198,7 @@ void SoftBody::update_avg_predict_edge_length()
     avg_predict_edge_length /= surface_edge_num;
 }
 
+/*
 void SoftBody::insert_mesh_keyframe(int frame)
 {
     namespace py = pybind11;
@@ -221,6 +222,7 @@ void SoftBody::insert_mesh_keyframe(int frame)
     // if object does not have shapekeys, create both shapekeys and shapekey
     if (bl_shape_keys.is(py::none()))
     {
+        py::print("obj has no shapekey");
         bl_obj.attr("shape_key_add")("name"_a = "Base", "from_mix"_a = false);
         bl_shape_key = bl_obj.attr("shape_key_add")("name"_a = frame_name, "from_mix"_a = false);
         bl_shape_keys = bl_obj.attr("data").attr("shape_keys");
@@ -230,15 +232,17 @@ void SoftBody::insert_mesh_keyframe(int frame)
     else
     {
         bl_key_blocks = bl_shape_keys.attr("key_blocks");
+        py::print("prepare to get shapekey, name:");
+        py::print(frame_name);
         bl_shape_key = bl_key_blocks.attr("get")(py::cast(frame_name));
         if (bl_shape_key.is(py::none()))
         {
+            py::print("no shapekey, add one, frame:");
+            py::print(std::to_string(frame));
             bl_shape_key = bl_obj.attr("shape_key_add")("name"_a = py::cast(frame_name), "from_mix"_a = false);
         }
     }
-
     bl_shape_keys.attr("use_relative") = false;
-
     size_t i = 0;
     for (auto bl_shape_key_point : bl_shape_key.attr("data"))
     {
@@ -248,12 +252,13 @@ void SoftBody::insert_mesh_keyframe(int frame)
         }
         ++i;
     }
-
+    return;
     // insert animation
     shape_key_internal_frame = bl_shape_key.attr("frame").cast<double>();
     bl_shape_keys.attr("eval_time") = shape_key_internal_frame;
     bl_shape_keys.attr("keyframe_insert")("data_path"_a = "eval_time", "frame"_a = frame);
 }
+*/
 
 std::string SoftBody::summary() const
 {
@@ -294,4 +299,20 @@ std::string SoftBody::summary() const
     ss << surface_edges << "\n";
 
     return ss.str();
+}
+
+SoftBodyMesh::SoftBodyMesh(const SoftBody &soft)
+{
+    bl_object_name = soft.bl_object_name;
+    vertex_num = soft.vertex_num;
+    surface_vertex_num = soft.surface_vertex_num;
+
+    vertices.resize(3 * vertex_num);
+    for (size_t i = 0; i < vertex_num; ++i)
+    {
+        for (size_t j = 0; j < 3; ++j)
+        {
+            vertices[3 * i + j] = soft.vertices(j, i);
+        }
+    }
 }

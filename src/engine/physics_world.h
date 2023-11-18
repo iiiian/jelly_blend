@@ -124,6 +124,7 @@ class PhysicsWorld
     void load_setting(const PhysicsWorldSetting &setting);
     void dump_to_file(std::string file_path);
     void load_from_file(std::string file_path);
+    std::vector<SoftBodyMesh> export_softbody_meshes();
     std::string summary();
     void test_func();
 };

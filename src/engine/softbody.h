@@ -65,7 +65,6 @@ class SoftBody : public Body
     void update_avg_predict_edge_length();
     void predict(double time_delta);
 
-    void insert_mesh_keyframe(int frame);
     std::string summary() const override;
 
     template <typename Archive> void save(Archive &ar) const
@@ -91,6 +90,18 @@ class SoftBody : public Body
 
         init();
     }
+};
+
+class SoftBodyMesh
+{
+  public:
+    std::string bl_object_name;
+    size_t vertex_num;
+    size_t surface_vertex_num;
+    std::vector<double> vertices;
+
+    SoftBodyMesh(){};
+    SoftBodyMesh(const SoftBody &soft);
 };
 
 using SPSoftBody = std::shared_ptr<SoftBody>;

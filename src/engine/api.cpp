@@ -33,6 +33,13 @@ PYBIND11_MODULE(jellyblend_engine, m)
         .def_readwrite("friction", &SoftBodySetting::friction)
         .def_readwrite("detect_self_collision", &SoftBodySetting::detect_self_collision);
 
+    py::class_<SoftBodyMesh>(m, "SoftBodyMesh")
+        .def(py::init())
+        .def_readwrite("bl_object_name", &SoftBodyMesh::bl_object_name)
+        .def_readwrite("vertex_num", &SoftBodyMesh::vertex_num)
+        .def_readwrite("surface_vertex_num", &SoftBodyMesh::surface_vertex_num)
+        .def_readwrite("vertices", &SoftBodyMesh::vertices);
+
     py::class_<PhysicsWorldSetting>(m, "PhysicsWorldSetting")
         .def(py::init())
         .def_readwrite("solver_substep_num", &PhysicsWorldSetting::solver_substep_num)
@@ -52,6 +59,7 @@ PYBIND11_MODULE(jellyblend_engine, m)
         .def("next_frame", &PhysicsWorld::next_frame)
         .def("simulate", &PhysicsWorld::simulate, "frame_start"_a, "frame_end"_a, "test_mode"_a = false)
         .def("load_setting", &PhysicsWorld::load_setting)
+        .def("export_softbody_meshes", &PhysicsWorld::export_softbody_meshes)
         .def("test_func", &PhysicsWorld::test_func);
 
     py::register_exception<MeshGenExceedIntMax>(m, "MeshGenExceedIntMax");
