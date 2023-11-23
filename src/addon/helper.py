@@ -1,4 +1,6 @@
 import bpy
+from . import jellyblend_engine as engine
+from functools import wraps
 
 
 def get_jb_collection(context):
@@ -76,3 +78,48 @@ def delete_softbody_mesh(obj):
             del obj[name]
 
     obj.jb_property.softbody.has_internal_mesh = False
+
+
+class JBEngineException(Exception):
+    pass
+
+
+def jb_engine_exp_handler(func):
+    @wraps(func)
+    def _handler(*args, **kwargs):
+        try:
+            ans = func(*args, **kwargs)
+        except engine.MeshGenExceedIntMax:
+            raise JBEngineException(
+                "Object has too many faces, can't generate softbody mesh."
+            )
+        except engine.MeshGenOutOfMem:
+            raise JBEngineException(
+                "Running out of memory, can't generate softbody mesh."
+            )
+        except engine.MeshGenKnowBug:
+            raise JBEngineException("bug occurs..., can't generate softbody mesh.")
+        except engine.MeshGenSelfIntersection:
+            raise JBEngineException(
+                "detect self intersections, can't generate softbody mesh. Please use the built-in 3D Print ToolBox to detect mesh problems"
+            )
+        except engine.MeshGenSmallFeature:
+            raise JBEngineException(
+                "detect very small faces, can't generate softbody mesh. Please use the built-in 3D Print ToolBox to detect mesh problems"
+            )
+        except engine.MeshGenUnknown:
+            raise JBEngineException("bug occurs..., can't generate softbody mesh.")
+        except engine.BlMeshModified:
+            raise JBEngineException(
+                "you seem to have modified the mesh of softbody/collider, simulation stop"
+            )
+        except engine.BlObjectMissing:
+            raise JBEngineException(
+                "can't find softbody/collider object, might be deleted/renamed, simulation stop"
+            )
+        except engine.SimBlowUp:
+            raise JBEngineException("softbody has blown up, simulation stop")
+        else:
+            return ans
+
+    return _handler

@@ -1,8 +1,8 @@
 import bpy
-import threading
 from . import helper
-from .shapekey_helper import insert_all_softbodies_shapekeys
+from .shapekey_helper import insert_all_softbodies_shapekeys, add_shapekey_range
 from . import jellyblend_engine as engine
+from .simulation_state import SimState
 
 
 class JBCreateCollection(bpy.types.Operator):
@@ -24,64 +24,39 @@ class JBSimulate(bpy.types.Operator):
     bl_label = "Start soft body simulation"
     bl_description = "Start Jelly Blend soft body simulation"
 
+    timer = None
+    phy_world = None
+
     is_simulating = False
-    start_inserting_shapekey = False
-    fin_inserting_shapekey = False
+    is_inserting_shapekey = False
     frame_start = 0
     frame_end = 0
     current_frame = 0
 
+    def __init__(self):
+        SimState.is_running = True
+
+    def __del__(self):
+        SimState.is_running = False
+
     @classmethod
     def poll(csl, context):
-        return helper.does_jb_collection_exist(context)
-
-    def _next_frame(self):
-        try:
-            self.phy_world.next_frame()
-        except engine.BlMeshModified:
-            self.report(
-                {"ERROR"},
-                "you seem to have modified the mesh of softbody/collider, simulation stop",
-            )
-        except engine.BlObjectMissing:
-            self.report(
-                {"ERROR"},
-                "can't find softbody/collider object, might be deleted/renamed, simulation stop",
-            )
-        except engine.SIMBlowUp:
-            self.report(
-                {"ERROR"},
-                "softbody has blown up, simulation stop",
-            )
-
-    def _launch_thread(self):
-        self.thread = threading.Thread(target=self._next_frame)
-        self.thread.start()
-        self.is_simulating = True
-        print("finished launching thread")
+        if helper.does_jb_collection_exist(context):
+            return not SimState.is_running
+        return False
 
     def _insert_all_softbodies_shapekeys(self):
         softbody_meshes = self.phy_world.export_softbody_meshes()
         insert_all_softbodies_shapekeys(softbody_meshes, self.current_frame)
-        self.fin_inserting_shapekey = True
 
     def modal(self, context, event):
-        if not self.is_simulating:
-            self._launch_thread()
-            print("finished launching thread")
+        if event.type != "TIMER":
+            return {"PASS_THROUGH"}
 
-        if self.thread.is_alive():
-            print("thread is alive")
+        if self.is_inserting_shapekey:
             return {"RUNNING_MODAL"}
 
-        self.current_frame += 1
-
-        if not self.start_inserting_shapekey:
-            self.start_inserting_shapekey = True
-            self._insert_all_softbodies_shapekeys()
-            return {"RUNNING_MODAL"}
-
-        if not self.fin_inserting_shapekey:
+        if self.is_simulating:
             return {"RUNNING_MODAL"}
 
         if self.current_frame == self.frame_end:
@@ -90,9 +65,36 @@ class JBSimulate(bpy.types.Operator):
             )
             return {"FINISHED"}
 
-        self._launch_thread()
-        self.start_inserting_shapekey = False
-        self.fin_inserting_shapekey = False
+        if SimState.is_interrupted:
+            SimState.is_interrupted = False
+            return {"FINISHED"}
+
+        # simulate
+        self.is_simulating = True
+        try:
+            helper.jb_engine_exp_handler(self.phy_world.next_frame)()
+        except helper.JBEngineException as err:
+            self.report(
+                {"ERROR"},
+                str(err),
+            )
+            return {"FINISHED"}
+        self.is_simulating = False
+
+        # update status
+        self.current_frame += 1
+        SimState.finished_frame += 1
+        # inserted shapekeys
+        self.is_inserting_shapekey = True
+        try:
+            self._insert_all_softbodies_shapekeys()
+        except RuntimeError as err:
+            self.report(
+                {"ERROR"},
+                str(err),
+            )
+            return {"FINISHED"}
+        self.is_inserting_shapekey = False
         return {"RUNNING_MODAL"}
 
     def invoke(self, context, event):
@@ -106,6 +108,9 @@ class JBSimulate(bpy.types.Operator):
         self.frame_start = sim_settings.frame_start
         self.frame_end = sim_settings.frame_end
         self.current_frame = self.frame_start
+
+        SimState.finished_frame = 0
+        SimState.total_frame = self.frame_end - self.frame_start
 
         if self.frame_start < scene_frame_start or self.frame_end > scene_frame_end:
             self.report(
@@ -131,7 +136,7 @@ class JBSimulate(bpy.types.Operator):
                 softbodies.append(obj)
 
         if len(softbodies) == 0:
-            return {"FINISHED"}
+            return {"CANCELLED"}
 
         for collider in colliders:
             mesh = collider.to_mesh()
@@ -196,151 +201,41 @@ class JBSimulate(bpy.types.Operator):
 
             self.phy_world.add_softbody(soft, soft_setting)
 
-        self.phy_world.prepare_simulation(sim_settings.frame_start, False)
+            add_shapekey_range(soft.name, self.frame_start, self.frame_end)
+
+        try:
+            helper.jb_engine_exp_handler(self.phy_world.prepare_simulation)(
+                sim_settings.frame_start, False
+            )
+        except helper.JBEngineException as err:
+            self.report(
+                {"ERROR"},
+                str(err),
+            )
+            return {"CANCELLED"}
 
         context.window_manager.modal_handler_add(self)
-        self.timer = context.window_manager.event_timer_add(0.1, window=context.window)
+        self.timer = context.window_manager.event_timer_add(0.01, window=context.window)
 
         return {"RUNNING_MODAL"}
 
 
-"""
-class JBSimulate(bpy.types.Operator):
-    bl_idname = "jb_operators.jb_simulate"
-    bl_label = "Start soft body simulation"
-    bl_description = "Start Jelly Blend soft body simulation"
+class JBStopSimulation(bpy.types.Operator):
+    bl_idname = "jb_operators.jb_stop_simulation"
+    bl_label = "Stop soft body simulation"
+    bl_description = "Stop Jelly Blend soft body simulation"
 
     @classmethod
     def poll(csl, context):
-        return helper.does_jb_collection_exist(context)
+        return SimState.is_running
 
     def execute(self, context):
-        jb_world = helper.get_jb_collection(context)
-        sim_settings = jb_world.jb_sim_setting
-
-        scene = context.scene
-        scene_frame_start = scene.frame_start
-        scene_frame_end = scene.frame_end
-
-        if (
-            sim_settings.frame_start < scene_frame_start
-            or sim_settings.frame_end > scene.frame_end
-        ):
-            self.report(
-                {"ERROR"},
-                "frame execeed blender frame limit",
-            )
-            return {"CANCELLED"}
-
-        if sim_settings.frame_start >= sim_settings.frame_end:
-            self.report(
-                {"ERROR"},
-                "frame start >= frame end",
-            )
-            return {"CANCELLED"}
-
-        colliders = []
-        softbodies = []
-
-        for obj in jb_world.all_objects:
-            if obj.jb_property.object_type == "TYPE_COLLIDER":
-                colliders.append(obj)
-            if obj.jb_property.object_type == "TYPE_SOFTBODY":
-                softbodies.append(obj)
-
-        if len(softbodies) == 0:
-            return {"FINISHED"}
-
-        for collider in colliders:
-            mesh = collider.to_mesh()
-            if not helper.has_triangular_mesh(mesh):
-                self.report(
-                    {"ERROR"},
-                    "collider " + collider.name + " has non triangular mesh",
-                )
-                collider.to_mesh_clear()
-                return {"CANCELLED"}
-            collider.to_mesh_clear()
-
-        for soft in softbodies:
-            if not soft.jb_property.softbody.has_internal_mesh:
-                self.report(
-                    {"ERROR"},
-                    "soft body "
-                    + soft.name
-                    + " has no softbody mesh, please generate them is physics panel",
-                )
-                return {"CANCELLED"}
-
-            jb_vert_num = soft["jb_softbody_mesh_surface_vertex_num"]
-            mesh_vert_num = len(soft.data.vertices)
-            if jb_vert_num != mesh_vert_num:
-                self.report(
-                    {"ERROR"},
-                    "you seem to have modified the mesh of "
-                    + soft.name
-                    + ", please regenerate softbody mesh is physics panel",
-                )
-                return {"CANCELLED"}
-
-        # load sim settings
-        phy_world = engine.PhysicsWorld()
-        phy_setting = engine.PhysicsWorldSetting()
-
-        phy_setting.solver_substep_num = sim_settings.solver_frame_substep
-        phy_setting.frame_substep_num = sim_settings.collision_frame_substep
-        phy_setting.frame_rate = sim_settings.frame_rate
-        phy_setting.passive_collision_distance = sim_settings.passive_collision_distance
-        phy_setting.spatial_map_size_multiplier = sim_settings.colli_map_size
-
-        phy_world.load_setting(phy_setting)
-
-        # load colliders
-        for collider in colliders:
-            phy_world.add_fixedbody(collider)
-
-        # load softbodies
-        for soft in softbodies:
-            soft_setting = engine.SoftBodySetting()
-            soft_props = soft.jb_property.softbody
-
-            soft_setting.density = soft_props.density
-            soft_setting.gravity = 9.8
-            soft_setting.youngs_modulus = soft_props.stiffness * 1e7
-            soft_setting.poissons_ratio = 0.5 - soft_props.compressibility * 0.01
-            soft_setting.damping = soft_props.damping
-            soft_setting.friction = soft_props.friction
-            soft_setting.detect_self_collision = soft_props.self_collision
-
-            phy_world.add_softbody(soft, soft_setting)
-
-        self.report({"INFO"}, "start simulation")
-        try:
-            phy_world.prepare_simulation(sim_settings.frame_start, False)
-
-            for frame in range(sim_settings.frame_start, sim_settings.frame_end):
-                phy_world.next_frame()
-                print(
-                    "finished simulating frame " + str(frame) + " to " + str(frame + 1)
-                )
-        except engine.BlMeshModified:
-            self.report(
-                {"ERROR"},
-                "you seem to have modified the mesh of softbody/collider, simulation stop",
-            )
-        except engine.BlObjectMissing:
-            self.report(
-                {"ERROR"},
-                "can't find softbody/collider object, might be deleted/renamed, simulation stop",
-            )
-        except engine.SIMBlowUp:
-            self.report(
-                {"ERROR"},
-                "softbody has blown up, simulation stop",
-            )
-        self.report({"INFO"}, "finished simulation")
+        SimState.is_interrupted = True
+        self.report(
+            {"INFO"},
+            "Stopping simulation, please wait",
+        )
         return {"FINISHED"}
-"""
 
 
 class JBCleanSimulation(bpy.types.Operator):
@@ -350,7 +245,7 @@ class JBCleanSimulation(bpy.types.Operator):
 
     @classmethod
     def poll(csl, context):
-        return helper.does_jb_collection_exist(context)
+        return helper.does_jb_collection_exist(context) and not SimState.is_running
 
     def execute(self, context):
         jb_world = helper.get_jb_collection(context)
@@ -476,31 +371,15 @@ class JBGenerateSoftBodyMesh(bpy.types.Operator):
             max_vol = -1
 
         try:
-            geometry = engine.softbody_mesh_from_bl_mesh(mesh, max_volume=max_vol)
-        except engine.MeshGenExceedIntMax:
-            self.report(
-                {"ERROR"}, "Object has too many faces, can't generate softbody mesh."
+            geometry = helper.jb_engine_exp_handler(engine.softbody_mesh_from_bl_mesh)(
+                mesh, max_volume=max_vol
             )
-            return {"CANCELLED"}
-        except engine.MeshGenOutOfMem:
-            self.report(
-                {"ERROR"}, "Running out of memory, can't generate softbody mesh."
-            )
-            return {"CANCELLED"}
-        except (engine.MeshGenKnowBug, engine.MeshGenUnknown):
-            self.report({"ERROR"}, "bug occurs..., can't generate softbody mesh.")
-            return {"CANCELLED"}
-        except engine.MeshGenSelfIntersection:
+        except helper.JBEngineException as err:
             self.report(
                 {"ERROR"},
-                "detect self intersections, can't generate softbody mesh. Please use the built-in 3D Print ToolBox to detect mesh problems",
+                str(err),
             )
             return {"CANCELLED"}
-        except engine.MeshGenSmallFeature:
-            self.report(
-                {"ERROR"},
-                "detect very small faces, can't generate softbody mesh. Please use the built-in 3D Print ToolBox to detect mesh problems",
-            )
         finally:
             object_eval.to_mesh_clear()
 
@@ -542,6 +421,7 @@ class JBDeleteSoftBodyMesh(bpy.types.Operator):
 def register():
     bpy.utils.register_class(JBCreateCollection)
     bpy.utils.register_class(JBSimulate)
+    bpy.utils.register_class(JBStopSimulation)
     bpy.utils.register_class(JBCleanSimulation)
     bpy.utils.register_class(JBAdd)
     bpy.utils.register_class(JBAddSoftBody)
@@ -554,6 +434,7 @@ def register():
 def unregister():
     bpy.utils.unregister_class(JBCreateCollection)
     bpy.utils.unregister_class(JBSimulate)
+    bpy.utils.unregister_class(JBStopSimulation)
     bpy.utils.unregister_class(JBCleanSimulation)
     bpy.utils.unregister_class(JBAdd)
     bpy.utils.unregister_class(JBAddSoftBody)
