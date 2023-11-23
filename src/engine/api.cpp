@@ -62,5 +62,5 @@ PYBIND11_MODULE(jellyblend_engine, m)
     py::register_exception<MeshGenUnknown>(m, "MeshGenUnknown");
     py::register_exception<BlMeshModified>(m, "BlMeshModified");
     py::register_exception<BlObjectMissing>(m, "BlObjectMissing");
-    py::register_exception<SIMBlowUp>(m, "SIMBlowUp");
+    py::register_exception<SimBlowUp>(m, "SimBlowUp");
 }

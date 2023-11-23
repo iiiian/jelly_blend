@@ -74,7 +74,7 @@ class BlObjectMissing : public std::exception
     }
 };
 
-class SIMBlowUp : public std::exception
+class SimBlowUp : public std::exception
 {
   public:
     const char *what() const noexcept override

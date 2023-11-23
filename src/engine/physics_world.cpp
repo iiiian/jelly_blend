@@ -73,7 +73,7 @@ std::vector<size_t> PhysicsWorld::minmax_to_hash(const Eigen::Vector3d &min, con
 
     if (delta * sizeof(Face) > spatial_map_mem_threshold * 1024 * 1024)
     {
-        throw SIMBlowUp();
+        throw SimBlowUp();
     }
 
     hash_indexs.resize(delta);
