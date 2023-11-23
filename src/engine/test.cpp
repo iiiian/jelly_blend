@@ -12,7 +12,7 @@ int main()
 
     for (int i = 0; i < 1; ++i)
     {
-        w.simulate(1, 100, true);
+        w.simulate(1, 30, true);
     }
 
     return 0;

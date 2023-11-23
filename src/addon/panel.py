@@ -1,5 +1,6 @@
 import bpy
 from . import helper
+from .simulation_state import SimState
 
 
 def append_to_PHYSICS_PT_add_panel(self, context):
@@ -174,7 +175,14 @@ class JB_PT_SimPanel(bpy.types.Panel):
             column.prop(sim_settings, "frame_start")
             column.prop(sim_settings, "frame_end")
             column.separator()
-            column.operator("jb_operators.jb_simulate", text="Simualate")
+            if SimState.is_running:
+                column.label(
+                    text=f"Baking...Finish frame {SimState.finished_frame}/{SimState.total_frame}"
+                )
+
+                column.operator("jb_operators.jb_stop_simulation", text="Stop")
+            else:
+                column.operator("jb_operators.jb_simulate", text="Simualate")
             column.operator("jb_operators.jb_clean_simulation", text="Clean Simulation")
 
             box = self.layout.box()

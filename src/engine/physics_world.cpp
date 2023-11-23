@@ -659,22 +659,15 @@ void PhysicsWorld::prepare_simulation(int frame_start, bool test_mode)
 
     if (!test_mode)
     {
-        for (auto sp_soft : sp_softbodies)
-        {
-            sp_soft->insert_mesh_keyframe(frame_start);
-        }
         for (auto sp_fixed : sp_fixedbodies)
         {
             sp_fixed->update_frame_vert(frame_start);
         }
     }
-
-    dump_to_file("/home/ian/local_code/jelly_blend/test/world_data");
 }
 
 void PhysicsWorld::next_frame()
 {
-
     for (current_frame_substep = 0; current_frame_substep < frame_substep_num; ++current_frame_substep)
     {
         update();
@@ -682,18 +675,7 @@ void PhysicsWorld::next_frame()
     }
 
     current_frame++;
-
-    if (test_mode)
-    {
-        return;
-    }
-
-    for (auto sp_soft : sp_softbodies)
-    {
-        sp_soft->insert_mesh_keyframe(current_frame);
-    }
 }
-
 void PhysicsWorld::simulate(int frame_start, int frame_end, bool test_mode)
 {
 
@@ -751,6 +733,18 @@ void PhysicsWorld::load_from_file(std::string file_path)
     reindex_softbody_positions();
 
     // spdlog::info("load physics world from file");
+}
+
+std::vector<SoftBodyMesh> PhysicsWorld::export_softbody_meshes()
+{
+    std::vector<SoftBodyMesh> ans;
+
+    for (auto spsoft : sp_softbodies)
+    {
+        ans.emplace_back(*spsoft);
+    }
+
+    return ans;
 }
 
 std::string PhysicsWorld::summary()
