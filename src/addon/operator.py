@@ -217,6 +217,8 @@ class JBSimulate(bpy.types.Operator):
         context.window_manager.modal_handler_add(self)
         self.timer = context.window_manager.event_timer_add(0.01, window=context.window)
 
+        self.phy_world.dump_to_file("/home/ian/local_code/jelly_blend/test/world_data")
+
         return {"RUNNING_MODAL"}
 
 

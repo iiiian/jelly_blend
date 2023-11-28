@@ -60,7 +60,7 @@ FixedVertCollisionConstrain::FixedVertCollisionConstrain(const Collision &collis
     assert((typeid(*p_face_body) == typeid(SoftBody)));
     assert((typeid(*p_vert_body) == typeid(FixedBody)));
 
-    auto p_face_soft = dynamic_cast<SoftBody *>(p_face_body);
+    auto p_face_soft = dynamic_cast<SoftBody const *>(p_face_body);
 
     size_t vertex_index = collision.vertex.vertex_index;
     size_t face_index = collision.face.face_index;
@@ -153,8 +153,8 @@ DynamicCollisionConstrain::DynamicCollisionConstrain(const Collision &collision,
     assert((typeid(*p_face_body) == typeid(SoftBody)));
     assert((typeid(*p_vert_body) == typeid(SoftBody)));
 
-    auto p_face_soft = dynamic_cast<SoftBody *>(p_face_body);
-    auto p_vert_soft = dynamic_cast<SoftBody *>(p_vert_body);
+    auto p_face_soft = dynamic_cast<SoftBody const *>(p_face_body);
+    auto p_vert_soft = dynamic_cast<SoftBody const *>(p_vert_body);
 
     size_t vertex_index = collision.vertex.vertex_index;
     size_t face_index = collision.face.face_index;
