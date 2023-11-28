@@ -253,7 +253,7 @@ std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &bod
         }
 
         bool is_predict_bary_in =
-            predict_bary[0] >= 0 && predict_bary[1] >= 0 && (predict_bary[0] + predict_bary[1] <= 1);
+            (predict_bary[0] >= 0 && predict_bary[1] >= 0 && (predict_bary[0] + predict_bary[1] <= 1));
         // passive collision
         if (predict_bary[2] > -passive_collision_distance && is_predict_bary_in)
         {

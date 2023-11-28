@@ -366,7 +366,7 @@ void PhysicsWorld::next_frame()
     for (current_frame_substep = 0; current_frame_substep < frame_substep_num; ++current_frame_substep)
     {
         update();
-        time += 1 / frame_rate / frame_substep_num;
+        time += time_delta;
     }
 
     current_frame++;
