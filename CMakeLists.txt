@@ -47,3 +47,6 @@ add_custom_command(TARGET jellyblend_engine POST_BUILD
 add_custom_command(TARGET jellyblend_engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${python_source} ${PROJECT_BINARY_DIR}/${addon_directory_name}/.
 )
+
+target_compile_options(jellyblend_engine PRIVATE -g -Wall)
+target_link_options(jellyblend_engine PRIVATE -g -Wall)

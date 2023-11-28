@@ -13,22 +13,10 @@
 #include "softbody.h"
 #include "utils.h"
 
-void PhysicsWorld::clean_spatial_map()
-{
-    for (auto &ele : spatial_map)
-    {
-        ele.time = -1;
-        ele.is_face_uni = true;
-        ele.pbody_first = nullptr;
-        ele.faces.clear();
-    }
-    spatial_map_mem_occupation = 0;
-}
-
 void PhysicsWorld::update_spatial_map_cellsize()
 {
     size_t total_edge_num = 0;
-    spatial_cell_size = 0;
+    double spatial_cell_size = 0;
 
     for (auto sp_fixed : sp_fixedbodies)
     {
@@ -43,317 +31,26 @@ void PhysicsWorld::update_spatial_map_cellsize()
         total_edge_num += sp_soft->surface_edge_num;
     }
     spatial_cell_size /= total_edge_num;
-}
-
-size_t PhysicsWorld::point_to_hash(const Eigen::Ref<const Eigen::Vector3d> &point)
-{
-    long long x = point[0] / spatial_cell_size;
-    long long y = point[1] / spatial_cell_size;
-    long long z = point[2] / spatial_cell_size;
-
-    long long temp = x * 73856093 ^ y * 19349663 ^ z * 83492791;
-    size_t hash = size_t(std::abs(temp)) % spatial_map_size;
-
-    return hash;
-}
-
-std::vector<size_t> PhysicsWorld::minmax_to_hash(const Eigen::Vector3d &min, const Eigen::Vector3d &max)
-{
-
-    // cast double to long long
-    int64_t minx = min(0) / spatial_cell_size;
-    int64_t miny = min(1) / spatial_cell_size;
-    int64_t minz = min(2) / spatial_cell_size;
-    int64_t maxx = max(0) / spatial_cell_size;
-    int64_t maxy = max(1) / spatial_cell_size;
-    int64_t maxz = max(2) / spatial_cell_size;
-
-    size_t delta = (maxx - minx + 1) * (maxy - miny + 1) * (maxz - minz + 1);
-    std::vector<size_t> hash_indexs;
-
-    if (delta * sizeof(Face) > spatial_map_mem_threshold * 1024 * 1024)
-    {
-        throw SimBlowUp();
-    }
-
-    hash_indexs.resize(delta);
-
-    size_t index = 0;
-    for (auto i = minx; i <= maxx; ++i)
-    {
-        for (auto j = miny; j <= maxy; ++j)
-        {
-            for (auto k = minz; k <= maxz; ++k)
-            {
-                long long temp = i * 73856093 ^ j * 19349663 ^ k * 83492791;
-                size_t hash = size_t(std::abs(temp)) % spatial_map_size;
-
-                hash_indexs[index] = hash;
-                index++;
-            }
-        }
-    }
-
-    return hash_indexs;
-}
-
-void PhysicsWorld::predict_face_to_spatial_map(Body *pbody, size_t face_index)
-{
-
-    auto vert_indexes = pbody->faces.col(face_index);
-
-    // face vertex position
-    Eigen::Matrix3d fv;
-    fv.col(0) = pbody->predict_vertices.col(vert_indexes[0]);
-    fv.col(1) = pbody->predict_vertices.col(vert_indexes[1]);
-    fv.col(2) = pbody->predict_vertices.col(vert_indexes[2]);
-
-    Eigen::Vector3d min = fv.col(0);
-    Eigen::Vector3d max = fv.col(0);
-
-    for (size_t i = 0; i < 3; ++i)
-    {
-        for (size_t j = 0; j < 3; ++j)
-        {
-            if (min[j] > fv(j, i))
-            {
-                min[j] = fv(j, i);
-            }
-            if (max[j] < fv(j, i))
-            {
-                max[j] = fv(j, i);
-            }
-        }
-    }
-
-    std::vector<size_t> hash_indexs;
-    hash_indexs = minmax_to_hash(min, max);
-
-    size_t delta_face_num = 0;
-    for (auto hash : hash_indexs)
-    {
-        assert((hash < spatial_map.size()));
-
-        if (spatial_map[hash].time != time)
-        {
-            spatial_map[hash].time = time;
-            delta_face_num -= spatial_map[hash].faces.size();
-            spatial_map[hash].faces.clear();
-            spatial_map[hash].is_face_uni = true;
-            spatial_map[hash].pbody_first = pbody;
-        }
-        delta_face_num += 1;
-
-        if (spatial_map[hash].is_face_uni && !spatial_map[hash].faces.empty())
-        {
-            spatial_map[hash].is_face_uni = (spatial_map[hash].pbody_first == pbody);
-        }
-
-        spatial_map[hash].faces.emplace_back(pbody, face_index);
-    }
-    spatial_map_mem_occupation += delta_face_num * sizeof(Face);
-}
-
-// calculate the barycentric coordinate of the vertex
-Eigen::Vector3d PhysicsWorld::cal_face_bary(const Eigen::Vector3d &vert, const Eigen::Matrix3d &face)
-{
-    Eigen::Vector3d normal, projection;
-    return cal_face_bary(vert, face, normal, projection);
-}
-
-// calculate the barycentric coordinate of the vertex
-// return the face normal and the vertex projection on the face too
-Eigen::Vector3d PhysicsWorld::cal_face_bary(const Eigen::Vector3d &vert, const Eigen::Matrix3d &face,
-                                            Eigen::Vector3d &normal, Eigen::Vector3d &vert_projection)
-{
-    Eigen::Vector3d bary;
-
-    // e1, e2 = edge of the face
-    Eigen::Vector3d e1 = face.col(1) - face.col(0);
-    Eigen::Vector3d e2 = face.col(2) - face.col(0);
-    // normal = normal of the face
-    normal = e1.cross(e2);
-    double e1xe2_norm = normal.norm();
-    normal /= e1xe2_norm;
-
-    // vertex distance to the face
-    double d = (vert - face.col(0)).dot(normal);
-    bary[2] = d;
-
-    // the barycentric coordinate (b1, b2) of the vertex projection
-    vert_projection = vert - d * normal; // vertex projection on the face
-    Eigen::Vector3d dp = vert_projection - face.col(0);
-    bary[0] = dp.cross(e2).norm() / e1xe2_norm;
-    bary[1] = e1.cross(dp).norm() / e1xe2_norm;
-
-    return bary;
-}
-
-std::optional<Collision> PhysicsWorld::detect_soft_vertex_collision(SoftBody *psoft, size_t vertex_index, size_t hash)
-{
-
-    if (spatial_map[hash].time != time)
-    {
-        return std::nullopt;
-    }
-
-    bool detect_self_colli = psoft->detect_self_collision;
-    const Body *pfirst = spatial_map[hash].pbody_first;
-    bool is_face_uni = spatial_map[hash].is_face_uni;
-    // softbody that does not self collide
-    if ((!detect_self_colli) && is_face_uni && pfirst == psoft)
-    {
-        return std::nullopt;
-    }
-
-    auto vert_new = psoft->predict_vertices.col(vertex_index);
-    auto vert_old = psoft->vertices.col(vertex_index);
-
-    // exam all potential faces
-    for (auto &face : spatial_map[hash].faces)
-    {
-        auto p_face_body = face.pbody;
-
-        // softbody (no self collide) dont collide with itself
-        // softbody (self collide) dont collide with adjacent face
-        auto face_vert_indexes = p_face_body->faces.col(face.face_index);
-        if (p_face_body == psoft)
-        {
-            if (!detect_self_colli)
-            {
-                continue;
-            }
-            bool is_adjacent_face = false;
-            for (auto f_vert_index : face_vert_indexes)
-            {
-                if (vertex_index == f_vert_index)
-                {
-                    is_adjacent_face = true;
-                    break;
-                }
-            }
-            if (is_adjacent_face)
-            {
-                continue;
-            }
-        }
-
-        Eigen::Matrix3d fc_new; // face corners coordinates
-        fc_new.col(0) = p_face_body->predict_vertices.col(face_vert_indexes(0));
-        fc_new.col(1) = p_face_body->predict_vertices.col(face_vert_indexes(1));
-        fc_new.col(2) = p_face_body->predict_vertices.col(face_vert_indexes(2));
-
-        Eigen::Vector3d normal, projection;
-        Eigen::Vector3d bary_new = cal_face_bary(vert_new, fc_new, normal, projection);
-
-        // continue of vertex is not at the back side of the face
-        if (bary_new[2] > 0)
-        {
-            continue;
-        }
-
-        // passive collision
-        if (bary_new[2] > -passive_collision_distance && bary_new[0] >= 0 && bary_new[1] >= 0 &&
-            (bary_new[0] + bary_new[1] <= 1))
-        {
-            Vertex collision_vert = {psoft, vertex_index};
-            return Collision(collision_vert, face, normal, projection);
-        }
-
-        Eigen::Matrix3d fc_old; // face corners coordinates
-        fc_old.col(0) = p_face_body->vertices.col(face_vert_indexes(0));
-        fc_old.col(1) = p_face_body->vertices.col(face_vert_indexes(1));
-        fc_old.col(2) = p_face_body->vertices.col(face_vert_indexes(2));
-
-        Eigen::Vector3d bary_old = cal_face_bary(vert_old, fc_old);
-
-        // continue if there's no trjectory penetration
-        // the addition of passive collision distance is to workaround
-        // penetration caused by dynamic collision constrain in last frame
-        if (bary_new[2] * (bary_old[2] + passive_collision_distance) > 0)
-        {
-            continue;
-        }
-
-        Eigen::Vector3d dbary = bary_new - bary_old;
-        double coeff = -bary_old[2] / dbary[2];
-        Eigen::Vector3d cbary = bary_old + coeff * dbary;
-
-        // check if collision point is inside the face
-        if (cbary[0] >= 0 && cbary[1] >= 0 && (cbary[0] + cbary[1]) <= 1)
-        {
-            Vertex collision_vert = {psoft, vertex_index};
-            return Collision(collision_vert, face, normal, projection);
-        }
-    }
-
-    return std::nullopt;
+    collision_detector.spatial_cell_size = spatial_cell_size;
 }
 
 void PhysicsWorld::detect_collisions()
 {
+    // hash all vertices to spatial map
+    for (auto sp_soft : sp_softbodies)
+    {
+        collision_detector.hash_soft_to_spatial_map(*sp_soft, time);
+    }
 
-    // hash all faces to spatial map
+    // iterate through all faces of softbodies to find penetrations
     for (auto sp_fixed : sp_fixedbodies)
     {
-        for (size_t i = 0; i < sp_fixed->face_num; ++i)
-        {
-            predict_face_to_spatial_map(sp_fixed.get(), i);
-        }
+        collision_detector.detect_body_collisions(*sp_fixed, time, collisions);
     }
     for (auto sp_soft : sp_softbodies)
     {
-        for (size_t i = 0; i < sp_soft->face_num; ++i)
-        {
-            predict_face_to_spatial_map(sp_soft.get(), i);
-        }
+        collision_detector.detect_body_collisions(*sp_soft, time, collisions);
     }
-
-    Eigen::Vector<size_t, Eigen::Dynamic> hashes;
-
-    // iterate through all the vertex of softbodies to find penetrations
-    for (auto sp_soft : sp_softbodies)
-    {
-
-        hashes.resize(sp_soft->vertex_num);
-        for (size_t i = 0; i < sp_soft->vertex_num; ++i)
-        {
-            hashes(i) = point_to_hash(sp_soft->predict_vertices.col(i));
-        }
-
-        for (size_t vertex_index = 0; vertex_index < sp_soft->surface_vertex_num; ++vertex_index)
-        {
-            auto opt_c = detect_soft_vertex_collision(sp_soft.get(), vertex_index, hashes(vertex_index));
-
-            if (!opt_c)
-            {
-                continue;
-            }
-            collisions.push_back(opt_c.value());
-        }
-    }
-
-    // iterate through all the vertex of fixedbodies to find penetrations
-    // for (auto sp_fixed : sp_fixedbodies)
-    // {
-
-    //     hashes.resize(sp_fixed->vertex_num);
-    //     for (size_t i = 0; i < sp_fixed->vertex_num; ++i)
-    //     {
-    //         hashes(i) = point_to_hash(sp_fixed->predict_vertices.col(i));
-    //     }
-
-    //     for (size_t vertex_index = 0; vertex_index < sp_fixed->vertex_num; ++vertex_index)
-    //     {
-
-    //         auto opt_c = detect_body_vertex_collision(sp_fixed.get(), vertex_index, hashes(vertex_index));
-
-    //         if (opt_c)
-    //         {
-    //             collisions.push_back(opt_c.value());
-    //         }
-    //     }
-    // }
 }
 
 void PhysicsWorld::generate_colli_constrains()
@@ -527,7 +224,15 @@ void PhysicsWorld::update_body_vertices()
         {
             continue;
         }
-        SoftBody *p_vert_soft = dynamic_cast<SoftBody *>(p_vert_body);
+        SoftBody *p_vert_soft = nullptr;
+        for (auto sp_soft : sp_softbodies)
+        {
+            if (sp_soft.get() == p_vert_body)
+            {
+                p_vert_soft = sp_soft.get();
+            }
+        }
+        assert((p_vert_soft != nullptr));
 
         // calculate face normal
         auto p_face_body = colli.face.pbody;
@@ -580,17 +285,7 @@ void PhysicsWorld::update()
 
     update_body_predict();
 
-    // spatial map house keeping
-    if (spatial_map.size() != spatial_map_size)
-    {
-        spatial_map.clear();
-        spatial_map_mem_occupation = 0;
-        spatial_map.resize(spatial_map_size);
-    }
-    if (spatial_map_mem_occupation > spatial_map_mem_threshold * 1024 * 1024)
-    {
-        clean_spatial_map();
-    }
+    collision_detector.spatial_map_housekeeping();
     update_spatial_map_cellsize();
 
     // detect collisions
@@ -622,7 +317,7 @@ void PhysicsWorld::add_softbody(SPSoftBody sp_soft)
     sp_softbodies.push_back(sp_soft);
     softbody_positions[sp_soft.get()] = Segment{position_num, 3 * sp_soft->vertex_num};
     position_num += 3 * sp_soft->vertex_num;
-    spatial_map_size += sp_soft->surface_vertex_num * spatial_map_size_multiplier;
+    collision_detector.spatial_map_size += sp_soft->surface_vertex_num * spatial_map_size_multiplier;
 }
 
 void PhysicsWorld::add_softbody_bl(pybind11::object bl_softbody, SoftBodySetting setting)
@@ -637,7 +332,7 @@ void PhysicsWorld::add_softbody_bl(pybind11::object bl_softbody, SoftBodySetting
 void PhysicsWorld::add_fixedbody(SPFixedBody pfixed)
 {
     sp_fixedbodies.push_back(pfixed);
-    spatial_map_size += pfixed->vertex_num * spatial_map_size_multiplier;
+    collision_detector.spatial_map_size += pfixed->vertex_num * spatial_map_size_multiplier;
 }
 
 void PhysicsWorld::add_fixedbody_bl(pybind11::object bl_fixedbody)
@@ -654,8 +349,8 @@ void PhysicsWorld::prepare_simulation(int frame_start, bool test_mode)
     current_frame = frame_start;
 
     auto get_digits = [](size_t x) { return x > 0 ? (size_t)std::log10((double)x) + 1 : 1; };
-    spatial_map_size = std::pow(10, get_digits(spatial_map_size)) - 1;
-    clean_spatial_map();
+    collision_detector.spatial_map_size = std::pow(10, get_digits(collision_detector.spatial_map_size)) - 1;
+    collision_detector.reset_spatial_map();
 
     if (!test_mode)
     {
@@ -700,8 +395,8 @@ void PhysicsWorld::load_setting(const PhysicsWorldSetting &setting)
     this->solver_substep_num = setting.solver_substep_num;
     this->frame_substep_num = setting.frame_substep_num;
     this->frame_rate = setting.frame_rate;
-    this->passive_collision_distance = setting.passive_collision_distance;
-    this->spatial_map_mem_threshold = setting.spatial_map_mem_threshold;
+    collision_detector.passive_collision_distance = setting.passive_collision_distance;
+    collision_detector.spatial_map_mem_limit = setting.spatial_map_mem_threshold;
     this->spatial_map_size_multiplier = setting.spatial_map_size_multiplier;
 }
 
@@ -711,10 +406,9 @@ void PhysicsWorld::dump_to_file(std::string file_path)
     cereal::BinaryOutputArchive oarchive(file_stream);
     file_stream.open(file_path, std::ios::binary);
 
-    oarchive(solver_substep_num, frame_substep_num, frame_rate, passive_collision_distance, spatial_map_mem_threshold,
-             spatial_map_size_multiplier);
-    oarchive(spatial_map_size, position_num);
+    oarchive(solver_substep_num, frame_substep_num, frame_rate, spatial_map_size_multiplier, position_num);
     oarchive(sp_fixedbodies, sp_softbodies);
+    oarchive(collision_detector);
 
     // spdlog::info("dump physics world from file");
 }
@@ -725,10 +419,9 @@ void PhysicsWorld::load_from_file(std::string file_path)
     cereal::BinaryInputArchive iarchive(file_stream);
     file_stream.open(file_path, std::ios::binary);
 
-    iarchive(solver_substep_num, frame_substep_num, frame_rate, passive_collision_distance, spatial_map_mem_threshold,
-             spatial_map_size_multiplier);
-    iarchive(spatial_map_size, position_num);
+    iarchive(solver_substep_num, frame_substep_num, frame_rate, spatial_map_size_multiplier, position_num);
     iarchive(sp_fixedbodies, sp_softbodies);
+    iarchive(collision_detector);
 
     reindex_softbody_positions();
 
@@ -756,11 +449,9 @@ std::string PhysicsWorld::summary()
     ss << "solver_substep_num = " << solver_substep_num << "\n";
     ss << "frame_substep_num = " << frame_substep_num << "\n";
     ss << "frame_rate = " << frame_rate << "\n";
-    ss << "passive_collision_distance = " << passive_collision_distance << "\n";
-    ss << "spatial_map_mem_threshold = " << spatial_map_mem_threshold << " MB\n";
-    ss << "spatial_map_size = " << spatial_map_size << "\n";
     ss << "fixedbodyies num = " << sp_fixedbodies.size() << "\n";
     ss << "softbodies num = " << sp_softbodies.size() << "\n";
+    ss << collision_detector.summary() << "\n";
     size_t fixedbody_index = 0;
     for (auto sp_fixed : sp_fixedbodies)
     {

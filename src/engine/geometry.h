@@ -5,18 +5,21 @@
 
 #include "body.h"
 
-struct Vertex
+class Vertex
 {
-    Body *pbody;
+  public:
+    Body const *pbody;
     size_t vertex_index;
+
+    Vertex(Body const *pbody, size_t vertex_index) : pbody(pbody), vertex_index(vertex_index){};
 };
 
 class Face
 {
   public:
-    Body *pbody;
+    Body const *pbody;
     size_t face_index;
 
     Face(){};
-    Face(Body *pbody, size_t face_index) : pbody(pbody), face_index(face_index){};
+    Face(Body const *pbody, size_t face_index) : pbody(pbody), face_index(face_index){};
 };
