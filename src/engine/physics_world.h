@@ -4,7 +4,6 @@
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
 #include <map>
-#include <optional>
 #include <pybind11/pybind11.h>
 #include <vector>
 
@@ -12,9 +11,8 @@
 #include "collision.h"
 #include "collision_constrain.h"
 #include "fixedbody.h"
-#include "geometry.h"
+#include "segment.h"
 #include "softbody.h"
-#include "utils.h"
 
 struct PhysicsWorldSetting
 {

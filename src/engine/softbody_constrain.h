@@ -2,7 +2,6 @@
 
 #include <Eigen/Core>
 #include <array>
-#include <cereal/types/array.hpp>
 #include <memory>
 #include <string>
 

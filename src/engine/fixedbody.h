@@ -6,7 +6,7 @@
 #include <string>
 
 #include "body.h"
-#include "serialization.h"
+#include "eigen_serialization.h"
 
 class FixedBody : public Body
 {

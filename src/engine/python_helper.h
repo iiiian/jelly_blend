@@ -4,7 +4,7 @@
 #include <pybind11/pybind11.h>
 #include <string>
 
-#include "utils.h"
+#include "eigen_alias.h"
 
 size_t py_len(pybind11::object obj);
 pybind11::object get_bl_object(std::string name);

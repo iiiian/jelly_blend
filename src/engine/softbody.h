@@ -9,10 +9,9 @@
 #include <vector>
 
 #include "body.h"
-#include "python_helper.h"
-#include "serialization.h"
+#include "eigen_alias.h"
+#include "eigen_serialization.h"
 #include "softbody_constrain.h"
-#include "utils.h"
 
 struct SoftBodySetting
 {

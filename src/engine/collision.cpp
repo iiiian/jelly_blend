@@ -4,9 +4,6 @@
 #include "collision.h"
 #include "jb_exception.h"
 
-#include "fixedbody.h"
-#include <unordered_set>
-
 Collision::Collision(Vertex &vertex, Face &face, Eigen::Vector3d &face_normal, Eigen::Vector3d &collision_point)
     : vertex(vertex), face(face), face_normal(face_normal), cpoint(collision_point)
 {

@@ -1,7 +1,6 @@
 #include <Eigen/Dense>
 #include <cassert>
 #include <cmath>
-#include <spdlog/spdlog.h>
 #include <sstream>
 
 #include "softbody_constrain.h"

@@ -5,7 +5,6 @@
 #include <cereal/cereal.hpp>
 #include <cereal/types/vector.hpp>
 #include <concepts>
-#include <spdlog/spdlog.h>
 #include <vector>
 
 namespace cereal

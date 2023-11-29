@@ -6,7 +6,7 @@
 #include <string>
 
 #include "collision.h"
-#include "utils.h"
+#include "segment.h"
 
 class CollisionConstrain
 {

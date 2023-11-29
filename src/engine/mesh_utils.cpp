@@ -1,7 +1,5 @@
 #include <array>
-#include <iostream>
 #include <pybind11/pybind11.h>
-#include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -9,7 +7,6 @@
 #include "jb_exception.h"
 #include "mesh_utils.h"
 #include "python_helper.h"
-#include "utils.h"
 
 #define TETLIBRARY
 #include "tetgen.h"

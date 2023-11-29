@@ -1,14 +1,11 @@
 #include <Eigen/Dense>
-#include <iostream>
 #include <pybind11/stl.h>
-#include <spdlog/spdlog.h>
 #include <sstream>
 #include <string>
 
 #include "jb_exception.h"
 #include "python_helper.h"
 #include "softbody.h"
-#include "utils.h"
 
 void SoftBody::load_settings(const SoftBodySetting &settings)
 {

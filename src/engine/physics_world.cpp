@@ -10,8 +10,8 @@
 #include "jb_exception.h"
 #include "physics_world.h"
 #include "python_helper.h"
+#include "segment.h"
 #include "softbody.h"
-#include "utils.h"
 
 void PhysicsWorld::update_spatial_map_cellsize()
 {

@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "utils.h"
+#include "eigen_alias.h"
 
 class Body
 {
