@@ -65,7 +65,7 @@ class CollisionDetector
     bool manual_passive_collision_distance = false;
     double passive_collision_distance = 0;
     // the upper limit of the number of spatial cells a face can span
-    uint blow_up_limit = 1e5;
+    unsigned int blow_up_limit = 10000;
 
     void reset_spatial_map();
     void spatial_map_housekeeping();
