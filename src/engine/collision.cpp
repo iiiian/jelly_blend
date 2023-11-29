@@ -201,6 +201,11 @@ Eigen::Vector3d CollisionDetector::cal_face_bary(const Eigen::Vector3d &vert, co
 
 std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &body, size_t face_index, double time)
 {
+    if (!manual_passive_collision_distance)
+    {
+        passive_collision_distance = spatial_cell_size / 10;
+    }
+
     Eigen::Matrix3d fcoor, fpredict_coor;
     Eigen::Vector<size_t, 3> fvert_indexes;
     for (size_t i = 0; i < 3; ++i)

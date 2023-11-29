@@ -21,6 +21,7 @@ struct PhysicsWorldSetting
     int solver_substep_num = 1;
     int frame_substep_num = 50;
     int frame_rate = 24;
+    bool manual_passive_collision_distance = false;
     double passive_collision_distance = 0.1;
     size_t spatial_map_mem_threshold = 100;
     int spatial_map_size_multiplier = 50;

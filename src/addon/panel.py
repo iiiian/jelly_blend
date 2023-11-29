@@ -37,7 +37,7 @@ def make_twin_label(
     column_right.label(text=text_right)
 
 
-class JB_PT_NoneTypePanel(bpy.types.Panel):
+class JB_PT_NoneType(bpy.types.Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "physics"
@@ -56,7 +56,7 @@ class JB_PT_NoneTypePanel(bpy.types.Panel):
         column.prop(obj_props, "object_type")
 
 
-class JB_PT_ColliderTypePanel(bpy.types.Panel):
+class JB_PT_ColliderType(bpy.types.Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "physics"
@@ -80,7 +80,7 @@ class JB_PT_ColliderTypePanel(bpy.types.Panel):
         # box.label(text="Collider")
 
 
-class JB_PT_SoftBodyTypePanel(bpy.types.Panel):
+class JB_PT_SoftBodyType(bpy.types.Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "physics"
@@ -150,11 +150,11 @@ class JB_PT_SoftBodyTypePanel(bpy.types.Panel):
         box.prop(softbody_props, "self_collision")
 
 
-class JB_PT_SimPanel(bpy.types.Panel):
+class JB_PT_SimControl(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_category = "Jelly Blend"
     bl_region_type = "UI"
-    bl_label = "Simulation"
+    bl_label = "Simulation Control"
 
     @classmethod
     def poll(cls, context):
@@ -170,7 +170,6 @@ class JB_PT_SimPanel(bpy.types.Panel):
             jb_world = helper.get_jb_collection(context)
             sim_settings = jb_world.jb_sim_setting
 
-            box.label(text="Start")
             column = box.column()
             column.prop(sim_settings, "frame_start")
             column.prop(sim_settings, "frame_end")
@@ -185,38 +184,72 @@ class JB_PT_SimPanel(bpy.types.Panel):
                 column.operator("jb_operators.jb_simulate", text="Simualate")
             column.operator("jb_operators.jb_clean_simulation", text="Clean Simulation")
 
-            box = self.layout.box()
-            box.label(text="Basic Settings")
-            column = box.column()
-            column.prop(sim_settings, "frame_rate")
-            column.prop(sim_settings, "collision_frame_substep", text="frame substep")
-            column.prop(sim_settings, "solver_frame_substep")
 
-            box = self.layout.box()
-            box.label(text="Advanced Settings")
-            column = box.column()
+class JB_PT_SimTimeSteps(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_category = "Jelly Blend"
+    bl_region_type = "UI"
+    bl_label = "Time steps"
+
+    @classmethod
+    def poll(cls, context):
+        return helper.does_jb_collection_exist(context)
+
+    def draw(self, context):
+        jb_world = helper.get_jb_collection(context)
+        sim_settings = jb_world.jb_sim_setting
+
+        box = self.layout.box()
+        column = box.column()
+        column.prop(sim_settings, "frame_rate")
+        column.prop(sim_settings, "collision_frame_substep", text="frame substep")
+        column.prop(sim_settings, "solver_frame_substep")
+
+
+class JB_PT_SimCollisionSettings(bpy.types.Panel):
+    bl_space_type = "VIEW_3D"
+    bl_category = "Jelly Blend"
+    bl_region_type = "UI"
+    bl_label = "Collision Settings"
+
+    @classmethod
+    def poll(cls, context):
+        return helper.does_jb_collection_exist(context)
+
+    def draw(self, context):
+        jb_world = helper.get_jb_collection(context)
+        sim_settings = jb_world.jb_sim_setting
+
+        box = self.layout.box()
+        column = box.column()
+        column.prop(
+            sim_settings,
+            "manual_passive_collision_distance",
+            text="Manual collsion distance",
+        )
+        if sim_settings.manual_passive_collision_distance:
             column.prop(sim_settings, "passive_collision_distance")
-            column.prop(sim_settings, "colli_map_size")
 
-        """
-        sim_setting = bpy.context.scene.jb_sim_setting
-        column.prop(sim_setting, "solver_frame_substep")
-        column.prop(sim_setting, "collision_frame_substep")
-        column.prop(sim_setting, "max_collision_distance")
-        """
+        box = self.layout.box()
+        column = box.column()
+        column.prop(sim_settings, "colli_map_size")
 
 
 def register():
     bpy.types.PHYSICS_PT_add.append(append_to_PHYSICS_PT_add_panel)
-    bpy.utils.register_class(JB_PT_NoneTypePanel)
-    bpy.utils.register_class(JB_PT_ColliderTypePanel)
-    bpy.utils.register_class(JB_PT_SoftBodyTypePanel)
-    bpy.utils.register_class(JB_PT_SimPanel)
+    bpy.utils.register_class(JB_PT_NoneType)
+    bpy.utils.register_class(JB_PT_ColliderType)
+    bpy.utils.register_class(JB_PT_SoftBodyType)
+    bpy.utils.register_class(JB_PT_SimControl)
+    bpy.utils.register_class(JB_PT_SimTimeSteps)
+    bpy.utils.register_class(JB_PT_SimCollisionSettings)
 
 
 def unregister():
     bpy.types.PHYSICS_PT_add.remove(append_to_PHYSICS_PT_add_panel)
-    bpy.utils.unregister_class(JB_PT_NoneTypePanel)
-    bpy.utils.unregister_class(JB_PT_ColliderTypePanel)
-    bpy.utils.unregister_class(JB_PT_SoftBodyTypePanel)
-    bpy.utils.unregister_class(JB_PT_SimPanel)
+    bpy.utils.unregister_class(JB_PT_NoneType)
+    bpy.utils.unregister_class(JB_PT_ColliderType)
+    bpy.utils.unregister_class(JB_PT_SoftBodyType)
+    bpy.utils.unregister_class(JB_PT_SimControl)
+    bpy.utils.unregister_class(JB_PT_SimTimeSteps)
+    bpy.utils.unregister_class(JB_PT_SimCollisionSettings)

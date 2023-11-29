@@ -81,6 +81,11 @@ class JBSimulationSetting(bpy.types.PropertyGroup):
         description="higher substep increase the quality of both collision and soft body physics",
     )
     frame_rate: bpy.props.IntProperty(name="frame rate", min=1, default=24)
+    manual_passive_collision_distance: bpy.props.BoolProperty(
+        name="manual passive collision distance",
+        default=False,
+        description="set passive collision distance manually",
+    )
     passive_collision_distance: bpy.props.FloatProperty(
         name="passive collision distance",
         min=0,

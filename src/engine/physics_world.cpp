@@ -378,7 +378,7 @@ void PhysicsWorld::simulate(int frame_start, int frame_end, bool test_mode)
 
     for (int i = frame_start; i < frame_end; ++i)
     {
-        spdlog::info("simulating frame {} to {}", current_frame, current_frame + 1);
+        // spdlog::info("simulating frame {} to {}", current_frame, current_frame + 1);
         next_frame();
     }
 
@@ -395,6 +395,7 @@ void PhysicsWorld::load_setting(const PhysicsWorldSetting &setting)
     this->solver_substep_num = setting.solver_substep_num;
     this->frame_substep_num = setting.frame_substep_num;
     this->frame_rate = setting.frame_rate;
+    collision_detector.manual_passive_collision_distance = setting.manual_passive_collision_distance;
     collision_detector.passive_collision_distance = setting.passive_collision_distance;
     collision_detector.spatial_map_mem_limit = setting.spatial_map_mem_threshold;
     this->spatial_map_size_multiplier = setting.spatial_map_size_multiplier;
