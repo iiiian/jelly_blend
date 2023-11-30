@@ -14,14 +14,14 @@ class JBSoftBodyProperty(bpy.types.PropertyGroup):
     )
     stiffness: bpy.props.FloatProperty(
         name="stiffness",
-        min=0,
+        min=1e-6,
         default=1,
         description="the stiffness of the soft body, affects bounciness. higher stiffness will require higher simulation substeps",
     )
     compressibility: bpy.props.FloatProperty(
         name="compressibility",
         min=0,
-        max=50,
+        max=49.99,
         default=0,
         description="the compressibility of the soft body, affects volume preservation",
     )
