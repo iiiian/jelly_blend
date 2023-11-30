@@ -175,10 +175,10 @@ class JB_PT_SimControl(bpy.types.Panel):
             column.prop(sim_settings, "frame_end")
             column.separator()
             if SimState.is_running:
-                column.label(
-                    text=f"Baking...Finish frame {SimState.finished_frame}/{SimState.total_frame}"
+                column.progress(
+                    text="Baking...",
+                    factor=SimState.finished_frame / SimState.total_frame,
                 )
-
                 column.operator("jb_operators.jb_stop_simulation", text="Stop")
             else:
                 column.operator("jb_operators.jb_simulate", text="Simualate")
