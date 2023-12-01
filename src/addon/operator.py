@@ -335,7 +335,7 @@ class JBRemove(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
 
-        if obj.softbody.has_internal_mesh:
+        if obj.jb_property.softbody.has_internal_mesh:
             helper.delete_softbody_mesh(obj)
 
         obj.jb_property.is_active = False
