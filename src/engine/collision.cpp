@@ -112,11 +112,6 @@ std::vector<size_t> CollisionDetector::minmax_to_hash(const Eigen::Vector3d &min
     size_t delta = (maxx - minx + 1) * (maxy - miny + 1) * (maxz - minz + 1);
     std::vector<size_t> hashes;
 
-    if (delta > blow_up_limit)
-    {
-        throw SimBlowUp();
-    }
-
     hashes.resize(delta);
 
     size_t index = 0;
@@ -138,27 +133,25 @@ std::vector<size_t> CollisionDetector::minmax_to_hash(const Eigen::Vector3d &min
     return hashes;
 }
 
-std::vector<size_t> CollisionDetector::face_coor_to_hashes(const Eigen::Matrix3d &face_coor)
+void CollisionDetector::get_3x3_minmax(const Eigen::Matrix3d &coor, Eigen::Vector3d &min, Eigen::Vector3d &max)
 {
-    Eigen::Vector3d min = face_coor.col(0);
-    Eigen::Vector3d max = face_coor.col(0);
+    min = coor.col(0);
+    max = coor.col(0);
 
     for (size_t i = 0; i < 3; ++i)
     {
         for (size_t j = 1; j < 3; ++j)
         {
-            if (min[i] > face_coor(i, j))
+            if (min[i] > coor(i, j))
             {
-                min[i] = face_coor(i, j);
+                min[i] = coor(i, j);
             }
-            if (max[i] < face_coor(i, j))
+            if (max[i] < coor(i, j))
             {
-                max[i] = face_coor(i, j);
+                max[i] = coor(i, j);
             }
         }
     }
-
-    return minmax_to_hash(min, max);
 }
 
 // calculate the barycentric coordinate of the vertex
@@ -212,7 +205,19 @@ std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &bod
         fpredict_coor.col(i) = body.predict_vertices.col(fvert_indexes[i]);
     }
 
-    std::vector<size_t> hashes = face_coor_to_hashes(fpredict_coor);
+    Eigen::Vector3d fmin, fmax, fpredict_min, fpredict_max;
+    get_3x3_minmax(fcoor, fmin, fmax);
+    get_3x3_minmax(fpredict_coor, fpredict_min, fpredict_max);
+
+    // detect blow up
+    double f_minmax_d = (fmax - fmin).norm();
+    double fpredict_minmax_d = (fpredict_max - fpredict_min).norm();
+    if (fpredict_minmax_d / f_minmax_d > (double)blow_up_limit)
+    {
+        throw SimBlowUp();
+    }
+
+    std::vector<size_t> hashes = minmax_to_hash(fmin, fmax);
     std::vector<Collision> colli;
 
     // detect collision between face and a vertex

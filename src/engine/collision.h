@@ -49,7 +49,7 @@ class CollisionDetector
 
     size_t point_to_hash(const Eigen::Ref<const Eigen::Vector3d> &point);
     std::vector<size_t> minmax_to_hash(const Eigen::Vector3d &min, const Eigen::Vector3d &max);
-    std::vector<size_t> face_coor_to_hashes(const Eigen::Matrix3d &face_coor);
+    void get_3x3_minmax(const Eigen::Matrix3d &coor, Eigen::Vector3d &min, Eigen::Vector3d &max);
     Eigen::Vector3d cal_face_bary(const Eigen::Vector3d &vert, const Eigen::Matrix3d &face);
     Eigen::Vector3d cal_face_bary(const Eigen::Vector3d &vert, const Eigen::Matrix3d &face, Eigen::Vector3d &normal,
                                   Eigen::Vector3d &vert_projection);
@@ -64,8 +64,8 @@ class CollisionDetector
     // if false, passive_collision_distance = spatial_cell_size / 10
     bool manual_passive_collision_distance = false;
     double passive_collision_distance = 0;
-    // the upper limit of the number of spatial cells a face can span
-    unsigned int blow_up_limit = 10000;
+    // the difference in dimension of a face between 1 time step should not exceed this limit
+    unsigned int blow_up_limit = 1e2;
 
     void reset_spatial_map();
     void spatial_map_housekeeping();
