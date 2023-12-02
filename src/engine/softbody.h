@@ -63,6 +63,7 @@ class SoftBody : public Body
 
     void update_avg_predict_edge_length();
     void predict(double time_delta);
+    void insert_mesh_keyframe(int frame);
 
     std::string summary() const override;
 

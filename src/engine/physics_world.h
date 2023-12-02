@@ -95,6 +95,7 @@ class PhysicsWorld
     void add_fixedbody_bl(pybind11::object bl_fixedbody);
     void prepare_simulation(int frame_start, bool test_mode);
     void next_frame();
+    void insert_softbody_shapekey();
     void simulate(int frame_start, int frame_end, bool test_mode = false);
     void load_setting(const PhysicsWorldSetting &setting);
     void dump_to_file(std::string file_path);

@@ -1,6 +1,5 @@
 import bpy
 from . import helper
-from .shapekey_helper import insert_all_softbodies_shapekeys, add_shapekey_range
 from . import jellyblend_engine as engine
 from .simulation_state import SimState
 
@@ -45,10 +44,6 @@ class JBSimulate(bpy.types.Operator):
             return not SimState.is_running
         return False
 
-    def _insert_all_softbodies_shapekeys(self):
-        softbody_meshes = self.phy_world.export_softbody_meshes()
-        insert_all_softbodies_shapekeys(softbody_meshes, self.current_frame)
-
     def modal(self, context, event):
         if event.type != "TIMER":
             return {"PASS_THROUGH"}
@@ -87,8 +82,8 @@ class JBSimulate(bpy.types.Operator):
         # inserted shapekeys
         self.is_inserting_shapekey = True
         try:
-            self._insert_all_softbodies_shapekeys()
-        except RuntimeError as err:
+            helper.jb_engine_exp_handler(self.phy_world.insert_softbody_shapekey)()
+        except helper.JBEngineException as err:
             self.report(
                 {"ERROR"},
                 str(err),
@@ -203,8 +198,6 @@ class JBSimulate(bpy.types.Operator):
             soft_setting.detect_self_collision = soft_props.self_collision
 
             self.phy_world.add_softbody(soft, soft_setting)
-
-            add_shapekey_range(soft.name, self.frame_start, self.frame_end)
 
         try:
             helper.jb_engine_exp_handler(self.phy_world.prepare_simulation)(

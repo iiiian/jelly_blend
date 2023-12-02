@@ -371,6 +371,15 @@ void PhysicsWorld::next_frame()
 
     current_frame++;
 }
+
+void PhysicsWorld::insert_softbody_shapekey()
+{
+    for (auto sp_soft : sp_softbodies)
+    {
+        sp_soft->insert_mesh_keyframe(current_frame);
+    }
+}
+
 void PhysicsWorld::simulate(int frame_start, int frame_end, bool test_mode)
 {
 
