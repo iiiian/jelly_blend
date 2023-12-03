@@ -180,22 +180,24 @@ void SoftBody::predict(double time_delta)
     predict_vertices += 0.5 * time_delta * time_delta * constant_accels;
 }
 
-void SoftBody::update_avg_predict_edge_length()
+double SoftBody::get_avg_predict_edge_length() const
 {
     Eigen::Vector3d d;
     Eigen::Vector<size_t, 2> edge;
 
     // calculate average surface edge length
-    avg_predict_edge_length = 0;
+    double avg_predict_edge_length = 0;
     for (size_t i = 0; i < surface_edge_num; ++i)
     {
         edge = surface_edges.col(i);
         avg_predict_edge_length += (predict_vertices.col(edge[0]) - predict_vertices.col(edge[1])).norm();
     }
     avg_predict_edge_length /= surface_edge_num;
+
+    return avg_predict_edge_length;
 }
 
-void SoftBody::insert_mesh_keyframe(int frame)
+void SoftBody::insert_mesh_keyframe(int frame) const
 {
     namespace py = pybind11;
     using namespace pybind11::literals;
@@ -259,7 +261,6 @@ std::string SoftBody::summary() const
     ss << "edge_num = " << edge_num << "\n";
     ss << "face_num = " << face_num << "\n";
     ss << "tetra_num = " << tetra_num << "\n";
-    ss << "avg_surface_edge_length = " << avg_predict_edge_length << "\n";
     ss << "surface_vertex_num = " << surface_vertex_num << "\n";
     ss << "surface_edge_num = " << surface_edge_num << "\n";
 

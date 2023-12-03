@@ -61,16 +61,16 @@ class SoftBody : public Body
     void construct_neonewton_constrains();
     void construct_constant_accel();
 
-    void update_avg_predict_edge_length();
+    double get_avg_predict_edge_length() const;
     void predict(double time_delta);
-    void insert_mesh_keyframe(int frame);
+    void insert_mesh_keyframe(int frame) const;
 
     std::string summary() const override;
 
     template <typename Archive> void save(Archive &ar) const
     {
         // base class Body
-        ar(vertex_num, edge_num, face_num, avg_predict_edge_length);
+        ar(vertex_num, edge_num, face_num);
         ar(vertices, velocity, predict_vertices, edges, faces);
         // softbody only
         ar(bl_object_name, density, gravity, youngs_modulus, poissons_ratio, damping, detect_self_collision);
@@ -81,7 +81,7 @@ class SoftBody : public Body
     template <typename Archive> void load(Archive &ar)
     {
         // base class Body
-        ar(vertex_num, edge_num, face_num, avg_predict_edge_length);
+        ar(vertex_num, edge_num, face_num);
         ar(vertices, velocity, predict_vertices, edges, faces);
         // softbody only
         ar(bl_object_name, density, gravity, youngs_modulus, poissons_ratio, damping, detect_self_collision);

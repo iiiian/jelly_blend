@@ -81,6 +81,26 @@ class JBSimulationSetting(bpy.types.PropertyGroup):
         description="higher substep increase the quality of both collision and soft body physics",
     )
     frame_rate: bpy.props.IntProperty(name="frame rate", min=1, default=24)
+
+    # collision settings
+    colli_map_size: bpy.props.IntProperty(
+        name="collision map size",
+        min=1,
+        max=100,
+        default=50,
+        description="the size of the collision hash map, might speed up collision detection",
+    )
+    manual_spatial_cell_size: bpy.props.BoolProperty(
+        name="manual spatial cell size",
+        default=False,
+        description="set spatial cell size manually",
+    )
+    spatial_cell_size: bpy.props.FloatProperty(
+        name="spatial cell size",
+        min=1e-8,
+        default=1,
+        description="the distance that triggers passive collision, in meter",
+    )
     manual_passive_collision_distance: bpy.props.BoolProperty(
         name="manual passive collision distance",
         default=False,
@@ -89,15 +109,8 @@ class JBSimulationSetting(bpy.types.PropertyGroup):
     passive_collision_distance: bpy.props.FloatProperty(
         name="passive collision distance",
         min=0,
-        default=1e-3,
+        default=1,
         description="the distance that triggers passive collision, in meter",
-    )
-    colli_map_size: bpy.props.IntProperty(
-        name="collision map size",
-        min=1,
-        max=100,
-        default=50,
-        description="the size of the collision hash map, might speed up collision detection",
     )
 
 

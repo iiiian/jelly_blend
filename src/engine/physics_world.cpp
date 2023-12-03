@@ -13,46 +13,6 @@
 #include "segment.h"
 #include "softbody.h"
 
-void PhysicsWorld::update_spatial_map_cellsize()
-{
-    size_t total_edge_num = 0;
-    double spatial_cell_size = 0;
-
-    for (auto sp_fixed : sp_fixedbodies)
-    {
-        sp_fixed->update_avg_predict_edge_length();
-        spatial_cell_size += sp_fixed->avg_predict_edge_length * sp_fixed->edge_num;
-        total_edge_num += sp_fixed->edge_num;
-    }
-    for (auto sp_soft : sp_softbodies)
-    {
-        sp_soft->update_avg_predict_edge_length();
-        spatial_cell_size += sp_soft->avg_predict_edge_length * sp_soft->surface_edge_num;
-        total_edge_num += sp_soft->surface_edge_num;
-    }
-    spatial_cell_size /= total_edge_num;
-    collision_detector.spatial_cell_size = spatial_cell_size;
-}
-
-void PhysicsWorld::detect_collisions()
-{
-    // hash all vertices to spatial map
-    for (auto sp_soft : sp_softbodies)
-    {
-        collision_detector.hash_soft_to_spatial_map(*sp_soft, time);
-    }
-
-    // iterate through all faces of softbodies to find penetrations
-    for (auto sp_fixed : sp_fixedbodies)
-    {
-        collision_detector.detect_body_collisions(*sp_fixed, time, collisions);
-    }
-    for (auto sp_soft : sp_softbodies)
-    {
-        collision_detector.detect_body_collisions(*sp_soft, time, collisions);
-    }
-}
-
 void PhysicsWorld::generate_colli_constrains()
 {
     for (auto &c : collisions)
@@ -285,12 +245,21 @@ void PhysicsWorld::update()
 
     update_body_predict();
 
-    collision_detector.spatial_map_housekeeping();
-    update_spatial_map_cellsize();
-
     // detect collisions
     collisions.clear();
-    detect_collisions();
+
+    std::vector<const SoftBody *> p_softbodies;
+    for (auto sp_soft : sp_softbodies)
+    {
+        p_softbodies.push_back(sp_soft.get());
+    }
+    std::vector<const FixedBody *> p_fixedbodies;
+    for (auto sp_fixed : sp_fixedbodies)
+    {
+        p_fixedbodies.push_back(sp_fixed.get());
+    }
+
+    collisions = collision_detector.detect_collisions(p_softbodies, p_fixedbodies, time);
     // if (!collisions.empty())
     // {
     //     spdlog::info("frame {}", current_frame);
@@ -317,7 +286,6 @@ void PhysicsWorld::add_softbody(SPSoftBody sp_soft)
     sp_softbodies.push_back(sp_soft);
     softbody_positions[sp_soft.get()] = Segment{position_num, 3 * sp_soft->vertex_num};
     position_num += 3 * sp_soft->vertex_num;
-    collision_detector.spatial_map_size += sp_soft->surface_vertex_num * spatial_map_size_multiplier;
 }
 
 void PhysicsWorld::add_softbody_bl(pybind11::object bl_softbody, SoftBodySetting setting)
@@ -332,7 +300,6 @@ void PhysicsWorld::add_softbody_bl(pybind11::object bl_softbody, SoftBodySetting
 void PhysicsWorld::add_fixedbody(SPFixedBody pfixed)
 {
     sp_fixedbodies.push_back(pfixed);
-    collision_detector.spatial_map_size += pfixed->vertex_num * spatial_map_size_multiplier;
 }
 
 void PhysicsWorld::add_fixedbody_bl(pybind11::object bl_fixedbody)
@@ -348,8 +315,6 @@ void PhysicsWorld::prepare_simulation(int frame_start, bool test_mode)
     time = frame_start * (1.f / frame_rate);
     current_frame = frame_start;
 
-    auto get_digits = [](size_t x) { return x > 0 ? (size_t)std::log10((double)x) + 1 : 1; };
-    collision_detector.spatial_map_size = std::pow(10, get_digits(collision_detector.spatial_map_size)) - 1;
     collision_detector.reset_spatial_map();
 
     if (!test_mode)
@@ -404,10 +369,25 @@ void PhysicsWorld::load_setting(const PhysicsWorldSetting &setting)
     this->solver_substep_num = setting.solver_substep_num;
     this->frame_substep_num = setting.frame_substep_num;
     this->frame_rate = setting.frame_rate;
-    collision_detector.manual_passive_collision_distance = setting.manual_passive_collision_distance;
-    collision_detector.passive_collision_distance = setting.passive_collision_distance;
-    collision_detector.spatial_map_mem_limit = setting.spatial_map_mem_threshold;
-    this->spatial_map_size_multiplier = setting.spatial_map_size_multiplier;
+
+    // settings for collision detector
+    collision_detector.spatial_map_size_multiplier = setting.spatial_map_size_multiplier;
+    collision_detector.spatial_map_mem_limit = setting.spatial_map_mem_limit;
+
+    auto set_opt = []<typename T>(std::optional<T> &opt, bool if_exist, T value) {
+        if (if_exist)
+        {
+            opt = value;
+        }
+        else
+        {
+            opt.reset();
+        }
+    };
+
+    set_opt(collision_detector.manual_spatial_cell_size, setting.manual_spatial_cell_size, setting.spatial_cell_size);
+    set_opt(collision_detector.manual_passive_collision_distance, setting.manual_passive_collision_distance,
+            setting.passive_collision_distance);
 }
 
 void PhysicsWorld::dump_to_file(std::string file_path)
@@ -416,7 +396,7 @@ void PhysicsWorld::dump_to_file(std::string file_path)
     cereal::BinaryOutputArchive oarchive(file_stream);
     file_stream.open(file_path, std::ios::binary);
 
-    oarchive(solver_substep_num, frame_substep_num, frame_rate, spatial_map_size_multiplier, position_num);
+    oarchive(solver_substep_num, frame_substep_num, frame_rate, position_num);
     oarchive(sp_fixedbodies, sp_softbodies);
     oarchive(collision_detector);
 
@@ -429,7 +409,7 @@ void PhysicsWorld::load_from_file(std::string file_path)
     cereal::BinaryInputArchive iarchive(file_stream);
     file_stream.open(file_path, std::ios::binary);
 
-    iarchive(solver_substep_num, frame_substep_num, frame_rate, spatial_map_size_multiplier, position_num);
+    iarchive(solver_substep_num, frame_substep_num, frame_rate, position_num);
     iarchive(sp_fixedbodies, sp_softbodies);
     iarchive(collision_detector);
 

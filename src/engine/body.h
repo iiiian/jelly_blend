@@ -12,8 +12,6 @@ class Body
     size_t edge_num;
     size_t face_num;
 
-    double avg_predict_edge_length;
-
     VERTICES vertices;
     VERTICES velocity;
     VERTICES predict_vertices;

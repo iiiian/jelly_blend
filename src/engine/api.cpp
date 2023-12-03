@@ -45,10 +45,11 @@ PYBIND11_MODULE(jellyblend_engine, m)
         .def_readwrite("solver_substep_num", &PhysicsWorldSetting::solver_substep_num)
         .def_readwrite("frame_substep_num", &PhysicsWorldSetting::frame_substep_num)
         .def_readwrite("frame_rate", &PhysicsWorldSetting::frame_rate)
+        .def_readwrite("spatial_map_size_multiplier", &PhysicsWorldSetting::spatial_map_size_multiplier)
+        .def_readwrite("manual_spatial_cell_size", &PhysicsWorldSetting::manual_spatial_cell_size)
+        .def_readwrite("spatial_cell_size", &PhysicsWorldSetting::spatial_cell_size)
         .def_readwrite("manual_passive_collision_distance", &PhysicsWorldSetting::manual_passive_collision_distance)
-        .def_readwrite("passive_collision_distance", &PhysicsWorldSetting::passive_collision_distance)
-        .def_readwrite("spatial_map_mem_threshold", &PhysicsWorldSetting::spatial_map_mem_threshold)
-        .def_readwrite("spatial_map_size_multiplier", &PhysicsWorldSetting::spatial_map_size_multiplier);
+        .def_readwrite("passive_collision_distance", &PhysicsWorldSetting::passive_collision_distance);
 
     py::class_<PhysicsWorld>(m, "PhysicsWorld")
         .def(py::init())

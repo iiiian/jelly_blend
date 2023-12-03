@@ -19,10 +19,14 @@ struct PhysicsWorldSetting
     int solver_substep_num = 1;
     int frame_substep_num = 50;
     int frame_rate = 24;
-    bool manual_passive_collision_distance = false;
-    double passive_collision_distance = 0.1;
-    size_t spatial_map_mem_threshold = 100;
+
+    // for collision detector
     int spatial_map_size_multiplier = 50;
+    size_t spatial_map_mem_limit = 1024;
+    bool manual_spatial_cell_size = false;
+    double spatial_cell_size = 1;
+    bool manual_passive_collision_distance = false;
+    double passive_collision_distance = 1;
 };
 
 class PhysicsWorld
@@ -34,14 +38,12 @@ class PhysicsWorld
     // each substep has damping, collision handling, ...
     int frame_substep_num = 50;
     int frame_rate = 24;
-    // collision below this distance will be detected
-    int spatial_map_size_multiplier = 50;
 
     // generated automatically, persistant across simulations
     size_t position_num = 0;
     std::vector<SPFixedBody> sp_fixedbodies;
     std::vector<SPSoftBody> sp_softbodies;
-    std::map<Body const *, Segment> softbody_positions;
+    std::map<const Body *, Segment> softbody_positions;
 
     // generated automatically during every simulation
     bool test_mode = false; // if true, no mesh key frame insertions
@@ -55,8 +57,7 @@ class PhysicsWorld
     Eigen::VectorXd simulation_vars;
 
     CollisionDetector collision_detector;
-    void update_spatial_map_cellsize();
-    void detect_collisions();
+
     void generate_colli_constrains();
 
     void predict();

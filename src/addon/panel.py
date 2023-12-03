@@ -222,6 +222,20 @@ class JB_PT_SimCollisionSettings(bpy.types.Panel):
 
         box = self.layout.box()
         column = box.column()
+        column.prop(sim_settings, "colli_map_size")
+
+        box = self.layout.box()
+        column = box.column()
+        column.prop(
+            sim_settings,
+            "manual_spatial_cell_size",
+            text="Manual spatial cell Size",
+        )
+        if sim_settings.manual_spatial_cell_size:
+            column.prop(sim_settings, "spatial_cell_size")
+
+        box = self.layout.box()
+        column = box.column()
         column.prop(
             sim_settings,
             "manual_passive_collision_distance",
@@ -229,10 +243,6 @@ class JB_PT_SimCollisionSettings(bpy.types.Panel):
         )
         if sim_settings.manual_passive_collision_distance:
             column.prop(sim_settings, "passive_collision_distance")
-
-        box = self.layout.box()
-        column = box.column()
-        column.prop(sim_settings, "colli_map_size")
 
 
 def register():

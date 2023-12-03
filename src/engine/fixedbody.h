@@ -23,7 +23,7 @@ class FixedBody : public Body
     FixedBody(pybind11::object bl_fixedbody);
     ~FixedBody(){};
 
-    void update_avg_predict_edge_length();
+    double get_avg_predict_edge_length() const;
     void update_frame_vert(int next_frame);
     // when progress=0, fixedbody at prev_frame
     // when progress=1, fixedbody at next_frame
@@ -33,7 +33,7 @@ class FixedBody : public Body
     template <typename Archive> void serialize(Archive &ar)
     {
         // base class Body
-        ar(vertex_num, edge_num, face_num, avg_predict_edge_length);
+        ar(vertex_num, edge_num, face_num);
         ar(vertices, predict_vertices, edges, faces);
 
         ar(bl_object_name);

@@ -42,6 +42,11 @@ void CollisionDetector::reset_spatial_map()
     vert_traj_num = 0;
 }
 
+void CollisionDetector::clear_spatial_map()
+{
+    spatial_map.clear();
+}
+
 void CollisionDetector::spatial_map_housekeeping()
 {
     size_t mem_occupation = vert_traj_num * sizeof(VertexTrajectory) / 1024 / 1024;
@@ -73,7 +78,7 @@ void CollisionDetector::hash_soft_to_spatial_map(const SoftBody &soft, double ti
 
     for (size_t vert_idx = 0; vert_idx < soft.surface_vertex_num; ++vert_idx)
     {
-        auto p_body = dynamic_cast<Body const *>(&soft);
+        auto p_body = dynamic_cast<const Body *>(&soft);
         Vertex vert(p_body, vert_idx);
         size_t hash = point_to_hash(soft.predict_vertices.col(vert_idx));
 
@@ -191,11 +196,6 @@ Eigen::Vector3d CollisionDetector::cal_face_bary(const Eigen::Vector3d &vert, co
 
 std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &body, size_t face_index, double time)
 {
-    if (!manual_passive_collision_distance)
-    {
-        passive_collision_distance = spatial_cell_size / 10;
-    }
-
     Eigen::Matrix3d fcoor, fpredict_coor;
     Eigen::Vector<size_t, 3> fvert_indexes;
     for (size_t i = 0; i < 3; ++i)
@@ -222,13 +222,13 @@ std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &bod
 
     // detect collision between face and a vertex
     auto detect_vert_colli = [&](VertexTrajectory &vert_traj) -> void {
-        Body const *p_vert_body = vert_traj.vertex.pbody;
+        const Body *p_vert_body = vert_traj.vertex.pbody;
         if (typeid(*p_vert_body) != typeid(SoftBody))
         {
             return;
         }
 
-        auto p_vert_soft = dynamic_cast<SoftBody const *>(p_vert_body);
+        auto p_vert_soft = dynamic_cast<const SoftBody *>(p_vert_body);
         Eigen::Vector3d &vcoor = vert_traj.coor;
         Eigen::Vector3d &vpredict_coor = vert_traj.predict_coor;
 
@@ -304,7 +304,7 @@ std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &bod
         // softbody that does not self collide
         if (typeid(body) == typeid(SoftBody))
         {
-            auto p_face_soft = dynamic_cast<SoftBody const *>(&body);
+            auto p_face_soft = dynamic_cast<const SoftBody *>(&body);
             if ((!p_face_soft->detect_self_collision) && ele.is_vert_uni && ele.pvert_first == &body)
             {
                 continue;
@@ -333,15 +333,112 @@ void CollisionDetector::detect_body_collisions(const Body &body, double time, st
     }
 }
 
+std::vector<Collision> CollisionDetector::detect_collisions(const std::vector<const SoftBody *> &p_softbodies,
+                                                            const std::vector<const FixedBody *> &p_fixedbodies,
+                                                            double time)
+{
+    // update spatial map size if necessary
+    size_t vert_num = 0;
+    for (auto p_soft : p_softbodies)
+    {
+        vert_num += spatial_map_size_multiplier * p_soft->surface_vertex_num;
+    }
+    for (auto p_fixed : p_fixedbodies)
+    {
+        vert_num += spatial_map_size_multiplier * p_fixed->vertex_num;
+    }
+
+    auto get_digits = [](size_t x) { return x > 0 ? (size_t)std::log10((double)x) + 1 : 1; };
+    spatial_map_size = std::pow(10, get_digits(vert_num)) - 1;
+    if (spatial_map.size() != spatial_map_size)
+    {
+        spatial_map.resize(spatial_map_size);
+    }
+
+    spatial_map_housekeeping();
+
+    // update spatial cell size
+    if (manual_spatial_cell_size)
+    {
+        spatial_cell_size = manual_spatial_cell_size.value();
+    }
+    else
+    {
+        size_t total_edge_num = 0;
+        spatial_cell_size = 0;
+
+        for (auto p_soft : p_softbodies)
+        {
+            double avg_length = p_soft->get_avg_predict_edge_length();
+            spatial_cell_size += avg_length * p_soft->surface_edge_num;
+            total_edge_num += p_soft->surface_edge_num;
+        }
+
+        for (auto p_fixed : p_fixedbodies)
+        {
+            double avg_length = p_fixed->get_avg_predict_edge_length();
+            spatial_cell_size += avg_length * p_fixed->edge_num;
+            total_edge_num += p_fixed->edge_num;
+        }
+        spatial_cell_size /= total_edge_num;
+    }
+
+    // update passive collsion distance
+    if (manual_passive_collision_distance)
+    {
+        passive_collision_distance = manual_passive_collision_distance.value();
+    }
+    else
+    {
+        passive_collision_distance = spatial_cell_size / 10;
+    }
+
+    // hash all vertices to spatial map
+    for (auto sp_soft : p_softbodies)
+    {
+        hash_soft_to_spatial_map(*sp_soft, time);
+    }
+
+    // iterate through all faces of softbodies to find penetrations
+    std::vector<Collision> collisions;
+    for (auto p_fixed : p_fixedbodies)
+    {
+        detect_body_collisions(*p_fixed, time, collisions);
+    }
+    for (auto p_soft : p_softbodies)
+    {
+        detect_body_collisions(*p_soft, time, collisions);
+    }
+
+    return collisions;
+}
+
 std::string CollisionDetector::summary()
 {
     std::stringstream ss;
 
     ss << "-----------------Collision Detector summary-----------------\n";
+    ss << "spatial_map_size_multiplier = " << spatial_map_size_multiplier << "\n";
     ss << "spatial_map_mem_limit = " << spatial_map_mem_limit << "\n";
-    ss << "spatial_map_size = " << spatial_map_size << "\n";
-    ss << "spatial_cell_size = " << spatial_cell_size << "\n";
-    ss << "passive_collision_distance = " << passive_collision_distance << "\n";
+
+    if (manual_spatial_cell_size)
+    {
+        ss << "manual_spatial_cell_size = " << manual_spatial_cell_size.value() << "\n";
+    }
+    else
+    {
+        ss << "manual_spatial_cell_size = false\n";
+    }
+
+    if (manual_passive_collision_distance)
+    {
+        ss << "manual_passive_collision_distance = " << manual_passive_collision_distance.value() << "\n";
+    }
+    else
+    {
+        ss << "manual_passive_collision_distance = false\n";
+    }
+
     ss << "blow_up_limit = " << blow_up_limit << "\n";
 
     return ss.str();
