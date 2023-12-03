@@ -56,7 +56,7 @@ class JBSimulate(bpy.types.Operator):
 
         if self.current_frame == self.frame_end:
             print(
-                f"sim fin, current frame {self.current_frame}, frame_end {self.frame_end}",
+                "Jelly Blend simulation finished",
             )
             return {"FINISHED"}
 
@@ -352,10 +352,12 @@ class JBGenerateSoftBodyMesh(bpy.types.Operator):
     def execute(self, context):
         depsgraph = context.evaluated_depsgraph_get()
         obj = bpy.context.active_object
-        bpy.ops.object.transform_apply()
+
+        # obj.data.trans
+        # context.view_layer.update()
+
         object_eval = obj.evaluated_get(depsgraph)
         mesh = object_eval.to_mesh()
-        mesh.transform(object_eval.matrix_world)
 
         if not helper.has_triangular_mesh(mesh):
             self.report(
@@ -395,6 +397,8 @@ class JBGenerateSoftBodyMesh(bpy.types.Operator):
         soft_prop.total_edge_count = len(geometry.all_edges)
         soft_prop.tetrahedron_count = len(geometry.tetrahedra)
         soft_prop.has_internal_mesh = True
+
+        obj.shape_key_clear()
 
         self.report({"INFO"}, "successfully generate softbody mesh")
         return {"FINISHED"}
