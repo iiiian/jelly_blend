@@ -23,7 +23,7 @@ class FixedBody : public Body
     FixedBody(pybind11::object bl_fixedbody);
     ~FixedBody(){};
 
-    double get_avg_predict_edge_length() const;
+    double get_predict_edge_length_sum() const;
     void update_frame_vert(int next_frame);
     // when progress=0, fixedbody at prev_frame
     // when progress=1, fixedbody at next_frame

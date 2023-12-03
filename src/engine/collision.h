@@ -62,6 +62,8 @@ class CollisionDetector
     void spatial_map_housekeeping();
     void hash_soft_to_spatial_map(const SoftBody &soft, double time);
     void detect_body_collisions(const Body &body, double time, std::vector<Collision> &collisons);
+    void calcualte_spatial_cell_size(const std::vector<const SoftBody *> &p_softbodies,
+                                     const std::vector<const FixedBody *> &p_fixedbodies, double time);
 
   public:
     unsigned int spatial_map_size_multiplier = 50;

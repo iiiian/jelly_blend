@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "collision.h"
+#include "eigen_alias.h"
 #include "jb_exception.h"
 
 Collision::Collision(Vertex &vertex, Face &face, Eigen::Vector3d &face_normal, Eigen::Vector3d &collision_point)
@@ -333,6 +334,43 @@ void CollisionDetector::detect_body_collisions(const Body &body, double time, st
     }
 }
 
+void CollisionDetector::calcualte_spatial_cell_size(const std::vector<const SoftBody *> &p_softbodies,
+                                                    const std::vector<const FixedBody *> &p_fixedbodies, double time)
+{
+    size_t total_edge_num = 0;
+    size_t total_vert_num = 0;
+    double edge_spatial_cell_size = 0;
+    double dx_spatial_cell_size = 0;
+
+    auto get_dx_sum = [time](const Body *p_body) {
+        VERTICES dx = p_body->velocity * time;
+        return dx.colwise().norm().sum();
+    };
+
+    for (auto p_soft : p_softbodies)
+    {
+        edge_spatial_cell_size += p_soft->get_predict_edge_length_sum();
+        total_edge_num += p_soft->surface_edge_num;
+
+        dx_spatial_cell_size += get_dx_sum(p_soft);
+        total_vert_num += p_soft->vertex_num;
+    }
+
+    for (auto p_fixed : p_fixedbodies)
+    {
+        edge_spatial_cell_size += p_fixed->get_predict_edge_length_sum();
+        total_edge_num += p_fixed->edge_num;
+
+        dx_spatial_cell_size += get_dx_sum(p_fixed);
+        total_vert_num += p_fixed->vertex_num;
+    }
+
+    edge_spatial_cell_size /= total_edge_num;
+    dx_spatial_cell_size /= total_vert_num;
+
+    spatial_cell_size = (edge_spatial_cell_size > dx_spatial_cell_size) ? edge_spatial_cell_size : dx_spatial_cell_size;
+}
+
 std::vector<Collision> CollisionDetector::detect_collisions(const std::vector<const SoftBody *> &p_softbodies,
                                                             const std::vector<const FixedBody *> &p_fixedbodies,
                                                             double time)
@@ -364,23 +402,7 @@ std::vector<Collision> CollisionDetector::detect_collisions(const std::vector<co
     }
     else
     {
-        size_t total_edge_num = 0;
-        spatial_cell_size = 0;
-
-        for (auto p_soft : p_softbodies)
-        {
-            double avg_length = p_soft->get_avg_predict_edge_length();
-            spatial_cell_size += avg_length * p_soft->surface_edge_num;
-            total_edge_num += p_soft->surface_edge_num;
-        }
-
-        for (auto p_fixed : p_fixedbodies)
-        {
-            double avg_length = p_fixed->get_avg_predict_edge_length();
-            spatial_cell_size += avg_length * p_fixed->edge_num;
-            total_edge_num += p_fixed->edge_num;
-        }
-        spatial_cell_size /= total_edge_num;
+        calcualte_spatial_cell_size(p_softbodies, p_fixedbodies, time);
     }
 
     // update passive collsion distance

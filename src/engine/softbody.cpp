@@ -180,21 +180,20 @@ void SoftBody::predict(double time_delta)
     predict_vertices += 0.5 * time_delta * time_delta * constant_accels;
 }
 
-double SoftBody::get_avg_predict_edge_length() const
+double SoftBody::get_predict_edge_length_sum() const
 {
     Eigen::Vector3d d;
     Eigen::Vector<size_t, 2> edge;
 
     // calculate average surface edge length
-    double avg_predict_edge_length = 0;
+    double sum = 0;
     for (size_t i = 0; i < surface_edge_num; ++i)
     {
         edge = surface_edges.col(i);
-        avg_predict_edge_length += (predict_vertices.col(edge[0]) - predict_vertices.col(edge[1])).norm();
+        sum += (predict_vertices.col(edge[0]) - predict_vertices.col(edge[1])).norm();
     }
-    avg_predict_edge_length /= surface_edge_num;
 
-    return avg_predict_edge_length;
+    return sum;
 }
 
 void SoftBody::insert_mesh_keyframe(int frame) const

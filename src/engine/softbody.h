@@ -61,7 +61,7 @@ class SoftBody : public Body
     void construct_neonewton_constrains();
     void construct_constant_accel();
 
-    double get_avg_predict_edge_length() const;
+    double get_predict_edge_length_sum() const;
     void predict(double time_delta);
     void insert_mesh_keyframe(int frame) const;
 

@@ -60,17 +60,16 @@ FixedBody::FixedBody(pybind11::object bl_fixedbody)
     // py::print(summary());
 }
 
-double FixedBody::get_avg_predict_edge_length() const
+double FixedBody::get_predict_edge_length_sum() const
 {
     // calculate average surface edge length
-    double avg_predict_edge_length = 0;
+    double sum = 0;
     for (auto edge : edges.colwise())
     {
-        avg_predict_edge_length += (predict_vertices.col(edge(0)) - predict_vertices.col(edge(1))).norm();
+        sum += (predict_vertices.col(edge(0)) - predict_vertices.col(edge(1))).norm();
     }
-    avg_predict_edge_length /= edge_num;
 
-    return avg_predict_edge_length;
+    return sum;
 }
 
 void FixedBody::update_frame_vert(int next_frame)
