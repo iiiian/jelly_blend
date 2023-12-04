@@ -406,7 +406,6 @@ std::vector<Collision> CollisionDetector::detect_collisions(const std::vector<co
     {
         vert_num += spatial_map_size_multiplier * p_fixed->vertex_num;
     }
-
     auto get_digits = [](size_t x) { return x > 0 ? (size_t)std::log10((double)x) + 1 : 1; };
     spatial_map_size = std::pow(10, get_digits(vert_num)) - 1;
     if (spatial_map.size() != spatial_map_size)
@@ -433,7 +432,7 @@ std::vector<Collision> CollisionDetector::detect_collisions(const std::vector<co
     }
     else
     {
-        passive_collision_distance = spatial_cell_size / 10;
+        passive_collision_distance = spatial_cell_size / 5;
     }
 
     // hash all vertices to spatial map
