@@ -2,12 +2,13 @@ bl_info = {
     "name": "Jelly Blend Soft Body",
     "author": "Tzu Hiang Su",
     "description": "A softbody simulation addon",
-    "blender": (3, 60, 0),
+    "blender": (4, 0, 0),
     "category": "Animation",
 }
 
 import bpy
 from . import property, operator, panel
+
 
 def register():
     property.register()
