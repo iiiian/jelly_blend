@@ -1,6 +1,6 @@
 # Play with the demo
 
-Go to the release page and download the demo after installing the add-on, you should be greeted with a window like below.
+Please download the `demo.blend` from release page, you should be greeted with a window like below.
 
 ![demo_initial_window](./assets/demo_initial_window.png)
 
