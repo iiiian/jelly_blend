@@ -353,8 +353,16 @@ class JBGenerateSoftBodyMesh(bpy.types.Operator):
         depsgraph = context.evaluated_depsgraph_get()
         obj = bpy.context.active_object
 
-        # obj.data.trans
-        # context.view_layer.update()
+        # clear shapekey
+        obj.shape_key_clear()
+
+        # apply rotation/scale/location
+        mb = obj.matrix_basis
+        obj.data.transform(mb)
+        obj.matrix_basis.identity()
+
+        # prevent stall data
+        context.view_layer.update()
 
         object_eval = obj.evaluated_get(depsgraph)
         mesh = object_eval.to_mesh()
