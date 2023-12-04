@@ -69,7 +69,7 @@ size_t CollisionDetector::point_to_hash(const Eigen::Ref<const Eigen::Vector3d> 
     return hash;
 }
 
-void CollisionDetector::spatial_map_insert(size_t hash, double time, VertexTrajectory &vert_traj)
+void CollisionDetector::spatial_map_insert(size_t hash, double time, const VertexTrajectory &vert_traj)
 {
     auto pbody = vert_traj.vertex.pbody;
     size_t delta_vert_traj = 0;

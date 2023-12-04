@@ -60,7 +60,7 @@ class CollisionDetector
                                   Eigen::Vector3d &vert_projection);
     std::vector<Collision> detect_face_collisions(const Body &body, size_t face_index, double time);
     void spatial_map_housekeeping();
-    void spatial_map_insert(size_t hash, double time, VertexTrajectory &vert_traj);
+    void spatial_map_insert(size_t hash, double time, const VertexTrajectory &vert_traj);
     void hash_vert_to_spatial_map(const Vertex &vertex, double time);
     void hash_soft_to_spatial_map(const SoftBody &soft, double time);
     void detect_body_collisions(const Body &body, double time, std::vector<Collision> &collisons);
