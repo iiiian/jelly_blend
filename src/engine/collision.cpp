@@ -69,39 +69,45 @@ size_t CollisionDetector::point_to_hash(const Eigen::Ref<const Eigen::Vector3d> 
     return hash;
 }
 
+void CollisionDetector::spatial_map_insert(size_t hash, double time, VertexTrajectory &vert_traj)
+{
+    auto pbody = vert_traj.vertex.pbody;
+    size_t delta_vert_traj = 0;
+    SpatialMapElement &ele = spatial_map[hash];
+
+    if (ele.time != time)
+    {
+        ele.time = time;
+        delta_vert_traj -= ele.vert_trajectories.size();
+        ele.vert_trajectories.clear();
+        ele.is_vert_uni = true;
+        ele.pvert_first = pbody;
+    }
+
+    if (ele.is_vert_uni)
+    {
+        ele.is_vert_uni = (ele.pvert_first == pbody);
+    }
+
+    ele.vert_trajectories.push_back(vert_traj);
+    delta_vert_traj++;
+    vert_traj_num += delta_vert_traj;
+}
+
 void CollisionDetector::hash_soft_to_spatial_map(const SoftBody &soft, double time)
 {
-    if (spatial_map.size() != spatial_map_size)
-    {
-        spatial_map.clear();
-        spatial_map.resize(spatial_map_size);
-    }
+    auto pbody = dynamic_cast<const Body *>(&soft);
 
     for (size_t vert_idx = 0; vert_idx < soft.surface_vertex_num; ++vert_idx)
     {
-        auto p_body = dynamic_cast<const Body *>(&soft);
-        Vertex vert(p_body, vert_idx);
-        size_t hash = point_to_hash(soft.predict_vertices.col(vert_idx));
+        Vertex vert(pbody, vert_idx);
+        VertexTrajectory vert_traj(vert, soft.vertices.col(vert_idx), soft.predict_vertices.col(vert_idx));
 
-        SpatialMapElement &ele = spatial_map[hash];
-        size_t delta_vert_traj = 0;
-        if (ele.time != time)
-        {
-            ele.time = time;
-            delta_vert_traj -= ele.vert_trajectories.size();
-            ele.vert_trajectories.clear();
-            ele.is_vert_uni = true;
-            ele.pvert_first = p_body;
-        }
+        size_t hash = point_to_hash(soft.vertices.col(vert_idx));
+        size_t predict_hash = point_to_hash(soft.predict_vertices.col(vert_idx));
 
-        if (ele.is_vert_uni)
-        {
-            ele.is_vert_uni = (ele.pvert_first == p_body);
-        }
-
-        ele.vert_trajectories.emplace_back(vert, soft.vertices.col(vert_idx), soft.predict_vertices.col(vert_idx));
-        delta_vert_traj++;
-        vert_traj_num += delta_vert_traj;
+        spatial_map_insert(hash, time, vert_traj);
+        spatial_map_insert(predict_hash, time, vert_traj);
     }
 }
 
@@ -260,22 +266,21 @@ std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &bod
             return;
         }
 
-        bool is_predict_bary_in =
-            (predict_bary[0] >= 0 && predict_bary[1] >= 0 && (predict_bary[0] + predict_bary[1] <= 1));
-        // passive collision
-        if (predict_bary[2] > -passive_collision_distance && is_predict_bary_in)
+        Eigen::Vector3d bary = cal_face_bary(vcoor, fcoor);
+
+        // passive collision for old vertex position
+        bool is_bary_in = (bary[0] >= 0 && bary[1] >= 0 && (bary[0] + bary[1] <= 1));
+        if (std::abs(bary[2]) < passive_collision_distance && is_bary_in)
         {
             Face face(&body, face_index);
             colli.emplace_back(vert_traj.vertex, face, normal, projection);
             return;
         }
 
-        Eigen::Vector3d bary = cal_face_bary(vcoor, fcoor);
-
         // continue if there's no trjectory penetration
         // the addition of passive collision distance is to workaround
         // penetration caused by dynamic collision constrain in last frame
-        if (predict_bary[2] * (bary[2] + passive_collision_distance) > 0)
+        if (predict_bary[2] * bary[2] > 1e-6)
         {
             return;
         }
@@ -295,7 +300,6 @@ std::vector<Collision> CollisionDetector::detect_face_collisions(const Body &bod
 
     for (size_t hash : hashes)
     {
-
         SpatialMapElement &ele = spatial_map[hash];
         if (ele.time != time)
         {
@@ -335,16 +339,16 @@ void CollisionDetector::detect_body_collisions(const Body &body, double time, st
 }
 
 void CollisionDetector::calcualte_spatial_cell_size(const std::vector<const SoftBody *> &p_softbodies,
-                                                    const std::vector<const FixedBody *> &p_fixedbodies, double time)
+                                                    const std::vector<const FixedBody *> &p_fixedbodies,
+                                                    double time_delta)
 {
     size_t total_edge_num = 0;
-    size_t total_vert_num = 0;
     double edge_spatial_cell_size = 0;
     double dx_spatial_cell_size = 0;
 
-    auto get_dx_sum = [time](const Body *p_body) {
-        VERTICES dx = p_body->velocity * time;
-        return dx.colwise().norm().sum();
+    auto get_max_dx = [time_delta](const VERTICES &velocity) {
+        VERTICES dx = velocity * time_delta;
+        return dx.colwise().norm().maxCoeff();
     };
 
     for (auto p_soft : p_softbodies)
@@ -352,8 +356,11 @@ void CollisionDetector::calcualte_spatial_cell_size(const std::vector<const Soft
         edge_spatial_cell_size += p_soft->get_predict_edge_length_sum();
         total_edge_num += p_soft->surface_edge_num;
 
-        dx_spatial_cell_size += get_dx_sum(p_soft);
-        total_vert_num += p_soft->vertex_num;
+        double max_dx = get_max_dx(p_soft->velocity(Eigen::all, Eigen::seqN(0, p_soft->surface_vertex_num)));
+        if (max_dx > dx_spatial_cell_size)
+        {
+            dx_spatial_cell_size = max_dx;
+        }
     }
 
     for (auto p_fixed : p_fixedbodies)
@@ -361,19 +368,21 @@ void CollisionDetector::calcualte_spatial_cell_size(const std::vector<const Soft
         edge_spatial_cell_size += p_fixed->get_predict_edge_length_sum();
         total_edge_num += p_fixed->edge_num;
 
-        dx_spatial_cell_size += get_dx_sum(p_fixed);
-        total_vert_num += p_fixed->vertex_num;
+        double max_dx = get_max_dx(p_fixed->velocity);
+        if (max_dx > dx_spatial_cell_size)
+        {
+            dx_spatial_cell_size = max_dx;
+        }
     }
 
     edge_spatial_cell_size /= total_edge_num;
-    dx_spatial_cell_size /= total_vert_num;
 
     spatial_cell_size = (edge_spatial_cell_size > dx_spatial_cell_size) ? edge_spatial_cell_size : dx_spatial_cell_size;
 }
 
 std::vector<Collision> CollisionDetector::detect_collisions(const std::vector<const SoftBody *> &p_softbodies,
                                                             const std::vector<const FixedBody *> &p_fixedbodies,
-                                                            double time)
+                                                            double time, double time_delta)
 {
     // update spatial map size if necessary
     size_t vert_num = 0;
@@ -402,7 +411,7 @@ std::vector<Collision> CollisionDetector::detect_collisions(const std::vector<co
     }
     else
     {
-        calcualte_spatial_cell_size(p_softbodies, p_fixedbodies, time);
+        calcualte_spatial_cell_size(p_softbodies, p_fixedbodies, time_delta);
     }
 
     // update passive collsion distance

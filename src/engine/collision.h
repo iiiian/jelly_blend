@@ -60,10 +60,12 @@ class CollisionDetector
                                   Eigen::Vector3d &vert_projection);
     std::vector<Collision> detect_face_collisions(const Body &body, size_t face_index, double time);
     void spatial_map_housekeeping();
+    void spatial_map_insert(size_t hash, double time, VertexTrajectory &vert_traj);
+    void hash_vert_to_spatial_map(const Vertex &vertex, double time);
     void hash_soft_to_spatial_map(const SoftBody &soft, double time);
     void detect_body_collisions(const Body &body, double time, std::vector<Collision> &collisons);
     void calcualte_spatial_cell_size(const std::vector<const SoftBody *> &p_softbodies,
-                                     const std::vector<const FixedBody *> &p_fixedbodies, double time);
+                                     const std::vector<const FixedBody *> &p_fixedbodies, double time_delta);
 
   public:
     unsigned int spatial_map_size_multiplier = 50;
@@ -78,7 +80,8 @@ class CollisionDetector
     void reset_spatial_map();
     void clear_spatial_map();
     std::vector<Collision> detect_collisions(const std::vector<const SoftBody *> &p_softbodies,
-                                             const std::vector<const FixedBody *> &p_fixedbodies, double time);
+                                             const std::vector<const FixedBody *> &p_fixedbodies, double time,
+                                             double time_delta);
     std::string summary();
 
     template <typename Archive> void serialize(Archive &ar)

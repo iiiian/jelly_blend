@@ -259,7 +259,7 @@ void PhysicsWorld::update()
         p_fixedbodies.push_back(sp_fixed.get());
     }
 
-    collisions = collision_detector.detect_collisions(p_softbodies, p_fixedbodies, time);
+    collisions = collision_detector.detect_collisions(p_softbodies, p_fixedbodies, time, time_delta);
     // if (!collisions.empty())
     // {
     //     spdlog::info("frame {}", current_frame);
