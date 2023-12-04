@@ -82,7 +82,8 @@ class JBSimulate(bpy.types.Operator):
         # inserted shapekeys
         self.is_inserting_shapekey = True
         try:
-            helper.jb_engine_exp_handler(self.phy_world.insert_softbody_shapekey)()
+            helper.jb_engine_exp_handler(
+                self.phy_world.insert_softbody_shapekey)()
         except helper.JBEngineException as err:
             self.report(
                 {"ERROR"},
@@ -213,9 +214,8 @@ class JBSimulate(bpy.types.Operator):
             return {"CANCELLED"}
 
         context.window_manager.modal_handler_add(self)
-        self.timer = context.window_manager.event_timer_add(0.01, window=context.window)
-
-        self.phy_world.dump_to_file("/home/ian/local_code/jelly_blend/test/world_data")
+        self.timer = context.window_manager.event_timer_add(
+            0.01, window=context.window)
 
         return {"RUNNING_MODAL"}
 
