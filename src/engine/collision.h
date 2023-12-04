@@ -14,12 +14,12 @@
 class Collision
 {
   public:
-    Vertex vertex;
-    Face face;
+    const Vertex vertex;
+    const Face face;
     Eigen::Vector3d face_normal;
     Eigen::Vector3d cpoint; // collision point
 
-    Collision(Vertex &vertex, Face &face, Eigen::Vector3d &face_normal, Eigen::Vector3d &collision_point);
+    Collision(const Vertex vertex, const Face face, Eigen::Vector3d face_normal, Eigen::Vector3d collision_point);
     std::string summary();
 };
 
@@ -43,29 +43,43 @@ struct SpatialMapElement
     std::vector<VertexTrajectory> vert_trajectories;
 };
 
+struct FaceRunTimeInfo
+{
+    const Body *pbody;
+    size_t face_index;
+    Eigen::Vector<size_t, 3> vert_indexes;
+    Eigen::Matrix3d coor;
+    Eigen::Matrix3d predict_coor;
+};
+
 class CollisionDetector
 {
   private:
     std::vector<SpatialMapElement> spatial_map;
+    std::vector<Collision> collisions;
     size_t vert_traj_num = 0;
     size_t spatial_map_size = 1;
     double spatial_cell_size = 1;
     double passive_collision_distance = 0;
 
+    FaceRunTimeInfo load_face_runtime_info(const Body &body, size_t face_index);
+    void spatial_map_housekeeping();
+    void calcualte_spatial_cell_size(const std::vector<const SoftBody *> &p_softbodies,
+                                     const std::vector<const FixedBody *> &p_fixedbodies, double time_delta);
+
+    void spatial_map_insert(size_t hash, double time, const VertexTrajectory &vert_traj);
     size_t point_to_hash(const Eigen::Ref<const Eigen::Vector3d> &point);
+    void cal_3x3_minmax(const Eigen::Matrix3d &coor, Eigen::Vector3d &min, Eigen::Vector3d &max);
     std::vector<size_t> minmax_to_hash(const Eigen::Vector3d &min, const Eigen::Vector3d &max);
-    void get_3x3_minmax(const Eigen::Matrix3d &coor, Eigen::Vector3d &min, Eigen::Vector3d &max);
+    void hash_soft_to_spatial_map(const SoftBody &soft, double time);
+
     Eigen::Vector3d cal_face_bary(const Eigen::Vector3d &vert, const Eigen::Matrix3d &face);
     Eigen::Vector3d cal_face_bary(const Eigen::Vector3d &vert, const Eigen::Matrix3d &face, Eigen::Vector3d &normal,
                                   Eigen::Vector3d &vert_projection);
-    std::vector<Collision> detect_face_collisions(const Body &body, size_t face_index, double time);
-    void spatial_map_housekeeping();
-    void spatial_map_insert(size_t hash, double time, const VertexTrajectory &vert_traj);
-    void hash_vert_to_spatial_map(const Vertex &vertex, double time);
-    void hash_soft_to_spatial_map(const SoftBody &soft, double time);
-    void detect_body_collisions(const Body &body, double time, std::vector<Collision> &collisons);
-    void calcualte_spatial_cell_size(const std::vector<const SoftBody *> &p_softbodies,
-                                     const std::vector<const FixedBody *> &p_fixedbodies, double time_delta);
+    bool is_traj_penetration(const Eigen::Vector3d &predict_bary, const Eigen::Vector3d &bary);
+    void detect_face_soft_vert_colli(const VertexTrajectory &vert_traj, const FaceRunTimeInfo &face_info);
+    void detect_face_collisions(const Body &body, size_t face_index, double time);
+    void detect_body_collisions(const Body &body, double time);
 
   public:
     unsigned int spatial_map_size_multiplier = 50;
