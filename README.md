@@ -2,46 +2,69 @@
 
 ## Install
 
+Go to the Release page to download zip file for your platform. Then in Blender, go to `Edit->Preference->Add-ons`. From there, click `install` button on the upper right corner and select the zip file. 
+
+**!! Important Notes:** Windows users need special steps to uninstall, please refer to the [Uninstall](#uninstall) section.
+
+![install_button_location](./readme_assets/install_button_location.png)
+
 ## Uninstall
+
+Linux user can ignore this section and remove the add-on normally.
+
+As for Windows users, due to the limitation of Blender and Python, a special uninstall method is required. 
+
+1. Disable the add-on
+2. Restart Blender
+3. Remove the add-on
+
+## Get Started
+
+
 
 ## Build from source
 
 ### Linux
 
-1. install build tools and dependencies
+1. Install build tools and dependencies
 
-   - a complier (ex. `gcc`/`clang`)
-   - a cmake generator (ex. `make`/`ninja`)
-   - python 3.10
+   - Complier (ex. `gcc`/`clang`)
+   - Cmake generator (ex. `make`/`ninja`)
+   - Python 3.10
    - `cmake`
    - `git`
 
-   you can install these build tools on Ubuntu by 
+   You can install these build tools on Ubuntu by 
 
    ```
    sudo apt install build-essential cmake git
    ```
 
-   check your system python version
+   Check your system python version
 
    ```
    python3 --version
    ```
 
-   if the version is not 3.10.x, you have to setup the correct version of python. I recommend python PPA or `miniconda`.
+   If the version is not 3.10.x, you have to setup the correct version of python. I recommends python PPA or `miniconda`.
 
-2. clone the repo and configure
+2. Clone the repo and configure
+
    ```
    git clone https://github.com/iiiian/jelly_blend.git
    ```
-	create build directory and configure
+
+	Create build directory and configure
+
    ```
    cd jelly_blend
    mkdir build
    cd build
    cmake ..
    ```
-	you might need to give `cmake` a hint to the correct python installation
+
+	You might need to give `cmake` a hint to the correct python installation
+
 	```
 	cmake -DPython_ROOT_DIR="path to your python binary" ..
    ```
@@ -52,28 +75,30 @@
    cmake --build .
    ```
 
-   after the build, there will be a folder called `jelly_blend_addon`. To install the addon, you can move the folder to the blender addon directory. Which is typically located at `~/.config/blender/3.6/scripts/addons`. Or you can compress the folder to `.zip` format and install the addon from blender gui.
+   After the build, there will be a folder called `jelly_blend_addon`. To install the addon, you can move the folder to the Blender addon directory. Which is typically located at `~/.config/blender/3.6/scripts/addons`. Or you can compress the folder to `.zip` format and install the addon from Blender gui.
 
 ### Windows
 
-1. install build tools and dependencies
+1. Install build tools and dependencies
 
-   - a complier (MSVC)
+   - Complier (MSVC)
+
      I do not suggest using `Mingw`, since you will need to link standard libraries statically.
-   - a cmake generator (ex. `make`/`ninja`)
-   - python 3.10
+
+   - Cmake generator (ex. `make`/`ninja`)
+   - Python 3.10
    - `cmake`
    - `git`
 
-   The most convenient way to get these build tools is to install the `Desktop development with C++` kit in Visual Studio. As for python, `miniconda/anaconda` is strongly recommended.
+   The most convenient way to get these build tools is to install the `Desktop development with C++` kit in Visual Studio. As for python, `miniconda`/`anaconda` is strongly recommended.
 
-2. clone the repo and configure
+2. Clone the repo and configure
 
    ```
    git clone https://github.com/iiiian/jelly_blend.git
    ```
 
-   create build directory and configure
+   Create build directory and configure
 
    ```
    cd jelly_blend
@@ -82,17 +107,17 @@
    cmake ..
    ```
 
-   you might need to give `cmake` a hint to the correct python installation
+   You might need to give `cmake` a hint to the correct python installation
 
    ```
    cmake -DPython_ROOT_DIR="path to your python binary" ..
    ```
 
-3. build and install
+3. Build and install
 
    ```
    cmake --build .
    ```
 
-   after the build, there will be a folder called `jelly_blend_addon`. To install the addon, you can move the folder to the blender addon directory. Or you can compress the folder to `.zip` format and install the addon from blender gui.
+   After the build, there will be a folder called `jelly_blend_addon`. To install the addon, you can move the folder to the Blender addon directory. Or you can compress the folder to `.zip` format and install the addon from Blender gui.
 
