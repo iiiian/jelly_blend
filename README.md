@@ -1,5 +1,21 @@
 # Jelly Blend - A soft Body simulation addon for Blender
 
+![demo](./readme_assets/demo.gif)
+
+Jelly Blend is a soft body physics engine using state of the art XPBD method. This software is currently WIP, so things will not be stable.
+
+Feature:
+- Soft body self collisions
+- Collision with colliders
+- Damping
+- Friction
+
+TODO:
+- Simulation caching
+- Multi-thread soft body constrain solving
+- Multi-thread collsion handling?
+- Ability to ping vertex
+
 ## Install
 
 Go to the Release page to download zip file for your platform. Then in Blender, go to `Edit->Preference->Add-ons`. From there, click `install` button on the upper right corner and select the zip file. 
@@ -121,3 +137,8 @@ As for Windows users, due to the limitation of Blender and Python, a special uni
 
    After the build, there will be a folder called `jelly_blend_addon`. To install the addon, you can move the folder to the Blender addon directory. Or you can compress the folder to `.zip` format and install the addon from Blender gui.
 
+## Credits
+
+- Miles Macklin and Matthias Muller. 2021. A Constraint-based Formulation of Stable Neo-Hookean Materials. In Proceedings of the 14th ACM SIGGRAPH Conference on Motion, Interaction and Games (MIG '21). Association for Computing Machinery, New York, NY, USA, Article 12, 1–7. https://doi.org/10.1145/3487983.3488289
+
+- Teschner, Matthias & Heidelberger, Bruno & Müller, Matthias & Pomeranets, Danat & Gross, Markus. (2003). Optimized Spatial Hashing for Collision Detection of Deformable Objects. VMV’03: Proceedings of the Vision, Modeling, Visualization. 3. 
