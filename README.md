@@ -42,7 +42,7 @@ As for Windows users, due to the limitation of Blender and Python, a special uni
 
 ## Get Started
 
-
+[User manual](./user_manual/get_started.md)
 
 ## Build from source
 
