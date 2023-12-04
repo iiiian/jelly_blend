@@ -16,6 +16,10 @@ TODO:
 - Multi-thread collsion handling?
 - Ability to ping vertex
 
+## Supported Blender version
+
+The addon is tested on the latest blender release (a.k.a. Blender 4.0+).
+
 ## Install
 
 Go to the Release page to download zip file for your platform. Then in Blender, go to `Edit->Preference->Add-ons`. From there, click `install` button on the upper right corner and select the zip file. 
@@ -23,6 +27,8 @@ Go to the Release page to download zip file for your platform. Then in Blender, 
 **!! Important Notes:** Windows users need special steps to uninstall, please refer to the [Uninstall](#uninstall) section.
 
 ![install_button_location](./readme_assets/install_button_location.png)
+
+after install, the add-on should appear as `Jelly Blend Soft Body`. Enable it by ticking the checkbox.
 
 ## Uninstall
 
